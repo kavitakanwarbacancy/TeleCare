@@ -1,5 +1,7 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Search, 
@@ -22,16 +24,9 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-interface SidebarItemProps {
-  to: string;
-  icon: React.ElementType;
-  label: string;
-  active?: boolean;
-}
-
 const SidebarItem = ({ to, icon: Icon, label, active }: any) => (
   <Link
-    to={to}
+    href={to}
     className={cn(
       "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
       active 
@@ -50,8 +45,8 @@ interface LayoutProps {
 }
 
 export const Layout = ({ children, role }: LayoutProps) => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const patientNav = [
@@ -108,14 +103,14 @@ export const Layout = ({ children, role }: LayoutProps) => {
               to={item.to}
               icon={item.icon}
               label={item.label}
-              active={location.pathname === item.to} 
+              active={pathname === item.to} 
             />
           ))}
         </nav>
 
         <div className="mt-auto pt-6 border-t border-slate-100">
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => router.push('/')}
             className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
           >
             <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500" />
@@ -137,7 +132,7 @@ export const Layout = ({ children, role }: LayoutProps) => {
 
           <div className="flex-1 hidden lg:block">
             <h1 className="text-xl font-semibold text-slate-800 capitalize">
-              {location.pathname.split('/').pop()?.replace('-', ' ')}
+              {pathname.split('/').pop()?.replace('-', ' ')}
             </h1>
           </div>
 
@@ -154,11 +149,14 @@ export const Layout = ({ children, role }: LayoutProps) => {
                 </p>
                 <p className="text-xs text-slate-500 capitalize">{role}</p>
               </div>
-              <img 
-                src={userInfo.avatar} 
-                alt="Avatar" 
-                className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
-              />
+              <div className="relative w-10 h-10">
+                <Image 
+                  src={userInfo.avatar} 
+                  alt="Avatar" 
+                  fill
+                  className="rounded-full border-2 border-white shadow-sm object-cover"
+                />
+              </div>
             </div>
           </div>
         </header>
@@ -192,7 +190,7 @@ export const Layout = ({ children, role }: LayoutProps) => {
                   to={item.to}
                   icon={item.icon}
                   label={item.label}
-                  active={location.pathname === item.to} 
+                  active={pathname === item.to} 
                 />
               ))}
             </nav>
