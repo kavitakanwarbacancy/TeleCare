@@ -1,0 +1,8 @@
+{
+  "name": "TeleCare",
+  "description": "A modern, minimal telemedicine platform connecting patients and doctors for remote consultations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

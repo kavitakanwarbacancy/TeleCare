@@ -1,0 +1,48 @@
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.*
+
+# Build output
+dist/
+build/
+.next/
+out/
+coverage/
+temp/
+tmp/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# IDE/files
+.vscode/
+.idea/
+*.swp
+
+# AWS credentials
+.aws/
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+*.local
