@@ -47,3 +47,7 @@ docker-compose.override.yml
 
 # Misc
 *.local
+
+# Uploaded files (reports, prescriptions etc.)
+uploads/*
+!uploads/.gitkeep

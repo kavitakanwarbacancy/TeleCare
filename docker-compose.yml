@@ -1,10 +1,9 @@
-version: "3.9"
-
 services:
   app:
-    build: .
+    build: ./backend
+    container_name: telecare_app
     ports:
-      - "3000:3000"
+      - "4000:3000"
     env_file:
       - .env
     depends_on:
@@ -12,7 +11,16 @@ services:
 
   db:
     image: postgres:16-alpine
+    container_name: telecare_db
+    restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
