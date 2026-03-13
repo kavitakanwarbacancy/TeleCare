@@ -1,0 +1,29 @@
+import { Router } from "express";
+import { authRouter } from "../modules/auth";
+import { usersRouter } from "../modules/users";
+import { doctorsRouter } from "../modules/doctors";
+import { appointmentsRouter } from "../modules/appointments";
+import { messagesRouter } from "../modules/messages";
+import { prescriptionsRouter } from "../modules/prescriptions";
+import { filesRouter } from "../modules/files";
+import { videoRouter } from "../modules/video";
+import { adminRouter } from "../modules/admin";
+
+const apiRouter = Router();
+
+apiRouter.get("/", (_req, res) => {
+  res.json({ message: "TeleCare API v1", version: "1.0" });
+});
+
+// Mount module routers (placeholder structure - APIs to be implemented)
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/users", usersRouter);
+apiRouter.use("/doctors", doctorsRouter);
+apiRouter.use("/appointments", appointmentsRouter);
+apiRouter.use("/messages", messagesRouter);
+apiRouter.use("/prescriptions", prescriptionsRouter);
+apiRouter.use("/files", filesRouter);
+apiRouter.use("/video", videoRouter);
+apiRouter.use("/admin", adminRouter);
+
+export { apiRouter };

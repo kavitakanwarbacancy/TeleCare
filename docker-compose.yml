@@ -3,7 +3,7 @@ services:
     build: ./backend
     container_name: telecare_app
     ports:
-      - "4000:3000"
+      - "4001:4001"
     env_file:
       - .env
     depends_on:

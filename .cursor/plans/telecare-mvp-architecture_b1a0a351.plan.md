@@ -156,8 +156,8 @@ We’ll implement migrations incrementally (users/auth first, then doctors/appoi
 All endpoints under `/api/v1`. High-level groups and initial routes:
 
 - **Auth (`/auth`)**
-  - `POST /auth/signup` – patient signup.
-  - `POST /auth/doctor-signup` – doctor signup (creates `users` + `doctor_profiles`).
+  - `POST /auth/signup/patient` – patient signup (creates `users` + `patients`).
+  - `POST /auth/signup/doctor` – doctor signup (same body as patient; creates `users` + `doctor_profiles` with placeholder specialization). Doctors complete their profile (specialization, experienceYears, bio, consultationFee) later via `PUT /doctors/me`.
   - `POST /auth/login` – email/password login, returns JWT + basic profile.
   - `GET /auth/me` – current user profile (requires auth).
 - **Users (`/users`)**
@@ -165,7 +165,7 @@ All endpoints under `/api/v1`. High-level groups and initial routes:
 - **Doctors (`/doctors`)**
   - `GET /doctors` – list doctors (filter by specialization, pagination).
   - `GET /doctors/:id` – doctor public profile.
-  - `PUT /doctors/me` – update own doctor profile (doctor-only).
+  - `PUT /doctors/me` – update own doctor profile (doctor-only). **Profile completion**: doctors who signed up with minimal data use this API to add specialization, experienceYears, bio, consultationFee, etc. Required before listing in search or accepting appointments.
 - **Appointments (`/appointments`)**
   - `POST /appointments` – patient creates an appointment with doctor, with `scheduled_at`, `reason`.
   - `GET /appointments` – list appointments for current user (role-aware):

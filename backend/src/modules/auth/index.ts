@@ -1,0 +1,60 @@
+import { Router, Request, Response, NextFunction } from "express";
+import { Role } from "../../../generated/prisma";
+import { toValidationError } from "../../utils/validation";
+import * as authService from "./auth.service";
+import { loginSchema, signupSchema } from "./auth.schemas";
+
+const router = Router();
+
+/**
+ * POST /auth/login
+ * Email/password login. Returns JWT + basic profile.
+ */
+router.post(
+  "/login",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        next(toValidationError(parsed.error));
+        return;
+      }
+
+      const { email, password } = parsed.data;
+      const result = await authService.login(email, password);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
+ * Shared signup handler. Route determines role.
+ * Doctors get a minimal DoctorProfile (placeholder specialization); complete via PUT /doctors/me.
+ */
+function createSignupHandler(role: Role) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = signupSchema.safeParse(req.body);
+      if (!parsed.success) {
+        next(toValidationError(parsed.error));
+        return;
+      }
+
+      const { name, email, password } = parsed.data;
+      const result = await authService.signup(name, email, password, role);
+      res.status(201).json(result);
+    } catch (e) {
+      next(e);
+    }
+  };
+}
+
+/** POST /auth/signup/patient – patient signup. Same request body as doctor. */
+router.post("/signup/patient", createSignupHandler(Role.PATIENT));
+
+/** POST /auth/signup/doctor – doctor signup. Complete profile later via PUT /doctors/me. */
+router.post("/signup/doctor", createSignupHandler(Role.DOCTOR));
+
+export { router as authRouter };
