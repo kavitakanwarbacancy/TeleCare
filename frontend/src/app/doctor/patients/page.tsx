@@ -103,9 +103,9 @@ export default function DoctorPatients() {
                 </button>
             </div>
 
-            {/* Patients Table */}
+            {/* Patients Table - Desktop */}
             <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -211,6 +211,80 @@ export default function DoctorPatients() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Patients List - Mobile */}
+                <div className="md:hidden p-4 space-y-4">
+                    {MOCK_DOCTOR_PATIENTS.map((patient) => (
+                        <div
+                            key={patient.id}
+                            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm space-y-3"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="relative w-12 h-12 flex-shrink-0">
+                                    <Image
+                                        src={patient.avatar}
+                                        fill
+                                        className="rounded-2xl object-cover shadow-sm"
+                                        alt={patient.name}
+                                        referrerPolicy="no-referrer"
+                                    />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-slate-900 truncate">{patient.name}</p>
+                                    <p className="text-xs text-slate-500 font-medium">
+                                        ID: #{patient.id}00{patient.id}
+                                    </p>
+                                </div>
+                                <span
+                                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                        patient.status === 'Recovered'
+                                            ? 'bg-green-50 text-green-600'
+                                            : 'bg-brand-50 text-brand-600'
+                                    }`}
+                                >
+                                    {patient.status}
+                                </span>
+                            </div>
+                            <div className="text-xs text-slate-600 space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                    <span className="truncate">{patient.email}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>{patient.phone}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5 text-brand-500" />
+                                    <span className="font-semibold text-slate-700">
+                                        {patient.condition}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Last visit: {patient.lastVisit}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-end gap-2 pt-2">
+                                <button
+                                    className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                                    title="View History"
+                                >
+                                    <History className="w-4 h-4" />
+                                </button>
+                                <button
+                                    className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                                    title="View Records"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                </button>
+                                <button className="p-2 text-slate-400 hover:text-slate-600 rounded-xl transition-all">
+                                    <MoreVertical className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </motion.div>
