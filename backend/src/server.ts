@@ -1,11 +1,17 @@
 import "dotenv/config";
+import http from "http";
 import { app } from "./app";
 import { config } from "./config";
+import { initializeSocket } from "./socket";
 
 const { port } = config;
 
-const server = app.listen(port, () => {
+const server = http.createServer(app);
+const io = initializeSocket(server);
+
+server.listen(port, () => {
   console.log(`[TeleCare] Server running on port ${port} (${config.nodeEnv})`);
+  console.log(`[TeleCare] Socket.io initialized`);
 });
 
 server.on("error", (err: NodeJS.ErrnoException) => {
@@ -17,10 +23,11 @@ server.on("error", (err: NodeJS.ErrnoException) => {
 });
 
 const shutdown = () => {
+  io.close();
   server.close(() => process.exit(0));
 };
 
 process.on("SIGTERM", shutdown);
 process.on("SIGINT", shutdown);
 
-export { server };
+export { server, io };

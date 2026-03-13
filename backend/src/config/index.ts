@@ -49,6 +49,9 @@ export const config = {
     smtpPass: getOptionalEnv("SMTP_PASS"),
     mailFrom: getOptionalEnv("MAIL_FROM", "TeleCare <noreply@localhost>"),
   },
+  dailyApiKey: process.env.DAILY_API_KEY ?? "",
+  dailyDomain: process.env.DAILY_DOMAIN ?? "",
+  frontendUrl: process.env.FRONTEND_URL ?? "",
 } as const;
 
 if (config.nodeEnv === "production" && !config.jwtSecret) {

@@ -1,9 +1,15 @@
 import express from "express";
+import cors from "cors";
 import { errorHandler } from "./middleware";
 import { apiRouter } from "./routes";
+import { config } from "./config";
 
 const app = express();
 
+app.use(cors({
+  origin: config.frontendUrl,
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
