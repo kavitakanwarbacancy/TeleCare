@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authRouter } from "../modules/auth";
 import { usersRouter } from "../modules/users";
 import { doctorsRouter } from "../modules/doctors";
+import { patientsRouter } from "../modules/patients";
 import { appointmentsRouter } from "../modules/appointments";
 import { messagesRouter } from "../modules/messages";
 import { prescriptionsRouter } from "../modules/prescriptions";
@@ -15,10 +16,10 @@ apiRouter.get("/", (_req, res) => {
   res.json({ message: "TeleCare API v1", version: "1.0" });
 });
 
-// Mount module routers (placeholder structure - APIs to be implemented)
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/users", usersRouter);
 apiRouter.use("/doctors", doctorsRouter);
+apiRouter.use("/patients", patientsRouter);
 apiRouter.use("/appointments", appointmentsRouter);
 apiRouter.use("/messages", messagesRouter);
 apiRouter.use("/prescriptions", prescriptionsRouter);
