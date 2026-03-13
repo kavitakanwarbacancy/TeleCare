@@ -19,11 +19,36 @@ function getDatabaseUrl(): string {
   return `postgresql://${user}:${encodeURIComponent(password)}@${host}:${port}/${name}`;
 }
 
+function getOptionalEnv(
+  key: string,
+  defaultValue?: string,
+): string | undefined {
+  return process.env[key] ?? defaultValue;
+}
+
+/** Default ports: backend 4001, frontend 3000. Set PORT / FRONTEND_PORT / APP_BASE_URL to override. */
+const appBaseUrl =
+  getOptionalEnv("APP_BASE_URL") ??
+  `http://localhost:${getOptionalEnv("FRONTEND_PORT", "3000")}`;
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: parseInt(process.env.PORT ?? "4001", 10),
-  jwtSecret: process.env.JWT_SECRET ?? (process.env.NODE_ENV === "production" ? undefined : "dev-secret-change-in-production"),
+  appBaseUrl,
+  jwtSecret:
+    process.env.JWT_SECRET ??
+    (process.env.NODE_ENV === "production"
+      ? undefined
+      : "dev-secret-change-in-production"),
   databaseUrl: getDatabaseUrl(),
+  /** Email (Nodemailer). Optional in dev; required when sending transactional emails. */
+  email: {
+    smtpHost: getOptionalEnv("SMTP_HOST", "localhost"),
+    smtpPort: parseInt(getOptionalEnv("SMTP_PORT", "1025") ?? "1025", 10),
+    smtpUser: getOptionalEnv("SMTP_USER"),
+    smtpPass: getOptionalEnv("SMTP_PASS"),
+    mailFrom: getOptionalEnv("MAIL_FROM", "TeleCare <noreply@localhost>"),
+  },
 } as const;
 
 if (config.nodeEnv === "production" && !config.jwtSecret) {

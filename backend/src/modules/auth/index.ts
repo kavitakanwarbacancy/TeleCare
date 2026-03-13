@@ -2,7 +2,12 @@ import { Router, Request, Response, NextFunction } from "express";
 import { Role } from "../../../generated/prisma";
 import { toValidationError } from "../../utils/validation";
 import * as authService from "./auth.service";
-import { loginSchema, signupSchema } from "./auth.schemas";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  resetPasswordSchema,
+  signupSchema,
+} from "./auth.schemas";
 
 const router = Router();
 
@@ -56,5 +61,48 @@ router.post("/signup/patient", createSignupHandler(Role.PATIENT));
 
 /** POST /auth/signup/doctor – doctor signup. Complete profile later via PUT /doctors/me. */
 router.post("/signup/doctor", createSignupHandler(Role.DOCTOR));
+
+/**
+ * POST /auth/forgot-password
+ * Request password reset. Sends email if user exists; same response either way.
+ */
+router.post(
+  "/forgot-password",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = forgotPasswordSchema.safeParse(req.body);
+      if (!parsed.success) {
+        next(toValidationError(parsed.error));
+        return;
+      }
+      const result = await authService.requestPasswordReset(parsed.data.email);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
+ * POST /auth/reset-password
+ * Reset password with token from email link.
+ */
+router.post(
+  "/reset-password",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = resetPasswordSchema.safeParse(req.body);
+      if (!parsed.success) {
+        next(toValidationError(parsed.error));
+        return;
+      }
+      const { token, newPassword } = parsed.data;
+      const result = await authService.resetPassword(token, newPassword);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 export { router as authRouter };
