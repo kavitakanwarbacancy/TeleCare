@@ -6,18 +6,98 @@ import { useRouter } from 'next/navigation';
 import { Stethoscope, Mail, Lock, User, ArrowRight, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 
+const COUNTRY_OPTIONS = [
+  '+91 (IND)',
+  '+65 (SGP)',
+  '+63 (PHL)',
+  '+60 (MYS)',
+  '+62 (IDN)',
+  '+55 (BRA)',
+  '+52 (MEX)',
+  '+54 (ARG)',
+  '+56 (CHL)',
+  '+84 (VNM)',
+  '+971 (UAE)',
+  '+965 (KW)',
+  '+255 (TZA)',
+  '+973 (BH)',
+  '+966 (SA)',
+  '+1 (USA)',
+];
+
 export default function SignupPage() {
   const router = useRouter();
-  const [role, setRole] = React.useState<'patient' | 'doctor' | 'admin'>('patient');
+  const [role, setRole] = React.useState<'patient' | 'doctor'>('patient');
+
+  const [fullName, setFullName] = React.useState('');
+  const [countryCode, setCountryCode] = React.useState('+91 (IND)');
+  const [mobile, setMobile] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [offersOptIn, setOffersOptIn] = React.useState(true);
+  const [acceptTerms, setAcceptTerms] = React.useState(false);
+  const [errors, setErrors] = React.useState<{
+    fullName?: string;
+    mobile?: string;
+    email?: string;
+    password?: string;
+    acceptTerms?: string;
+  }>({});
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const validate = () => {
+    const newErrors: {
+      fullName?: string;
+      mobile?: string;
+      email?: string;
+      password?: string;
+      acceptTerms?: string;
+    } = {};
+
+    if (!fullName.trim()) {
+      newErrors.fullName = 'Please enter your full name.';
+    } else if (fullName.trim().length < 2) {
+      newErrors.fullName = 'Name must be at least 2 characters.';
+    }
+
+    if (!mobile.trim()) {
+      newErrors.mobile = 'Please enter your mobile number.';
+    } else if (!/^\d{10}$/.test(mobile.trim())) {
+      newErrors.mobile = 'Enter a valid 10-digit mobile number.';
+    }
+
+    if (email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        newErrors.email = 'Enter a valid email address.';
+      }
+    }
+
+    if (!password) {
+      newErrors.password = 'Please create a password.';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters.';
+    }
+
+    if (!acceptTerms) {
+      newErrors.acceptTerms = 'You must agree to the terms to continue.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    // Simulate OTP send + signup success, then redirect based on role
     if (role === 'patient') {
       router.push('/patient/dashboard');
-    } else if (role === 'doctor') {
-      router.push('/doctor/dashboard');
     } else {
-      router.push('/admin/dashboard');
+      router.push('/doctor/dashboard');
     }
   };
 
@@ -25,12 +105,15 @@ export default function SignupPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
       {/* Left Side - Form */}
       <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-24 bg-white relative overflow-hidden">
-        <Link href="/" className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-brand-500 transition-colors font-semibold group">
+        <Link
+          href="/"
+          className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-brand-500 transition-colors font-semibold group"
+        >
           <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           Back to Home
         </Link>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -43,78 +126,137 @@ export default function SignupPage() {
             <span className="text-2xl font-bold text-slate-900 tracking-tight">TeleCare</span>
           </div>
 
-          <h2 className="text-4xl font-bold text-slate-900 mb-2">
-            Create Account
-          </h2>
+          <h2 className="text-4xl font-bold text-slate-900 mb-2">Join TeleCare</h2>
           <p className="text-slate-500 mb-10">
-            Join TeleCare today for better healthcare access.
+            Create your account and get started with secure online consultations.
           </p>
 
-          {/* Role Switcher */}
+          {/* Role Switcher (Patient / Doctor only) */}
           <div className="flex p-1 bg-slate-100 rounded-2xl mb-8">
-            <button 
+            <button
+              type="button"
               onClick={() => setRole('patient')}
-              className={`flex-1 py-3 rounded-xl font-bold transition-all ${role === 'patient' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+                role === 'patient'
+                  ? 'bg-white text-brand-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
               Patient
             </button>
-            <button 
+            <button
+              type="button"
               onClick={() => setRole('doctor')}
-              className={`flex-1 py-3 rounded-xl font-bold transition-all ${role === 'doctor' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+                role === 'doctor'
+                  ? 'bg-white text-brand-600 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
               Doctor
             </button>
-            <button 
-              onClick={() => setRole('admin')}
-              className={`flex-1 py-3 rounded-xl font-bold transition-all ${role === 'admin' ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Admin
-            </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 ml-1">Full Name</label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="John Doe" 
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none transition-all font-medium"
-                  required
+                <input
+                  type="text"
+                  placeholder="John Doe"
+                  className={`w-full pl-12 pr-4 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-medium ${
+                    errors.fullName ? 'border-red-500' : 'border-transparent focus:border-brand-500'
+                  }`}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                 />
               </div>
+              {errors.fullName && (
+                <p className="text-xs text-red-500 font-medium ml-1">{errors.fullName}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Email Address</label>
+              <label className="text-sm font-bold text-slate-700 ml-1">Mobile Number</label>
+              <div className="flex gap-3">
+                <div className="w-40">
+                  <select
+                    className="w-full px-3 py-3 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none text-sm font-medium text-slate-700"
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                  >
+                    {COUNTRY_OPTIONS.map((code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex-1 relative group">
+                  <input
+                    type="tel"
+                    placeholder="10-digit mobile number"
+                    className={`w-full px-4 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-medium ${
+                      errors.mobile ? 'border-red-500' : 'border-transparent focus:border-brand-500'
+                    }`}
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
+                    maxLength={10}
+                  />
+                </div>
+              </div>
+              {errors.mobile && (
+                <p className="text-xs text-red-500 font-medium ml-1">{errors.mobile}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 ml-1">
+                Email Address (optional)
+              </label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
-                <input 
-                  type="email" 
-                  placeholder="name@example.com" 
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none transition-all font-medium"
-                  required
+                <input
+                  type="email"
+                  placeholder="name@example.com"
+                  className={`w-full pl-12 pr-4 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-medium ${
+                    errors.email ? 'border-red-500' : 'border-transparent focus:border-brand-500'
+                  }`}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs text-red-500 font-medium ml-1">{errors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
+              <label className="text-sm font-bold text-slate-700 ml-1">Create Password</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none transition-all font-medium"
-                  required
+                <input
+                  type="password"
+                  placeholder="Minimum 8 characters"
+                  className={`w-full pl-12 pr-4 py-4 bg-slate-50 border-2 rounded-2xl focus:bg-white outline-none transition-all font-medium ${
+                    errors.password ? 'border-red-500' : 'border-transparent focus:border-brand-500'
+                  }`}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
+              {errors.password && (
+                <p className="text-xs text-red-500 font-medium ml-1">{errors.password}</p>
+              )}
             </div>
 
-            <button 
-              type="submit" 
-              className="w-full py-5 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 hover:shadow-brand-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
+    
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-5 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 hover:shadow-brand-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
             >
               Create Account
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -124,8 +266,8 @@ export default function SignupPage() {
           <div className="mt-10 text-center">
             <p className="text-slate-500 font-medium">
               Already have an account?
-              <Link 
-                href="/login" 
+              <Link
+                href="/login"
                 className="ml-2 text-brand-600 font-bold hover:text-brand-700 underline decoration-2 underline-offset-4"
               >
                 Log In
@@ -146,13 +288,16 @@ export default function SignupPage() {
             <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-[32px] flex items-center justify-center mx-auto mb-12 border border-white/30">
               <Stethoscope className="text-white w-12 h-12" />
             </div>
-            <h3 className="text-5xl font-bold text-white mb-8 leading-tight">Your Health, Our Priority.</h3>
+            <h3 className="text-5xl font-bold text-white mb-8 leading-tight">
+              Your Health, Our Priority.
+            </h3>
             <p className="text-xl text-brand-100 leading-relaxed">
-              Experience the future of healthcare with TeleCare. Connect with experts in minutes and manage your health records seamlessly.
+              Experience the future of healthcare with TeleCare. Connect with experts in minutes and
+              manage your health records seamlessly.
             </p>
           </motion.div>
         </div>
-        
+
         {/* Abstract Background Shapes */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-brand-900/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
