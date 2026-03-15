@@ -34,6 +34,45 @@ const upload = multer({
   },
 });
 
+// Get all files accessible to the current user 
+router.get(
+  "/mine",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.sub;
+      const files = await prisma.file.findMany({
+        where: {
+          OR: [
+            { uploadedById: userId },
+            { appointment: { patient: { userId } } },
+            { appointment: { doctor: { userId } } },
+          ],
+        },
+        include: {
+          uploadedBy: { select: { id: true, name: true, role: true } },
+          appointment: { select: { id: true, scheduledAt: true, reason: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      res.json(
+        files.map((f) => ({
+          id: f.id,
+          originalName: f.originalName,
+          mimeType: f.mimeType,
+          type: f.type,
+          sizeBytes: f.sizeBytes.toString(),
+          uploadedBy: f.uploadedBy,
+          appointment: f.appointment,
+          createdAt: f.createdAt,
+        })),
+      );
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 // Upload file for an appointment
 router.post(
   "/upload",

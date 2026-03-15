@@ -188,3 +188,62 @@ export async function getById(prescriptionId: string, userId: string, role: stri
 
   return prescription;
 }
+
+export async function listForUser(userId: string, role: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      doctorProfile: { select: { id: true } },
+      patient: { select: { id: true } },
+    },
+  });
+
+  const where =
+    role === "DOCTOR" && user?.doctorProfile
+      ? { doctorId: user.doctorProfile.id }
+      : role === "PATIENT" && user?.patient
+        ? { patientId: user.patient.id }
+        : role === "ADMIN"
+          ? {}
+          : { id: "none" }; // no match
+
+  const prescriptions = await prisma.prescription.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      doctorId: true,
+      patientId: true,
+      appointmentId: true,
+      notes: true,
+      createdAt: true,
+      items: {
+        select: {
+          id: true,
+          drugName: true,
+          dosage: true,
+          frequency: true,
+          duration: true,
+          quantity: true,
+          instructions: true,
+        },
+      },
+      doctor: {
+        select: {
+          id: true,
+          specialization: true,
+          user: { select: { id: true, name: true } },
+        },
+      },
+      appointment: {
+        select: {
+          id: true,
+          scheduledAt: true,
+          reason: true,
+        },
+      },
+    },
+  });
+
+  return { prescriptions };
+}

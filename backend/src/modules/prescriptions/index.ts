@@ -2,13 +2,94 @@ import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware";
 import { toValidationError } from "../../utils/validation";
 import * as prescriptionsService from "./prescriptions.service";
-import { prescriptionIdParamSchema } from "./prescriptions.schemas";
+import {
+  prescriptionIdParamSchema,
+  appointmentIdParamSchema,
+  createPrescriptionSchema,
+} from "./prescriptions.schemas";
 
 const router = Router();
 
 /**
+ * POST /prescriptions/appointment/:appointmentId
+ * Doctor creates a prescription for an appointment.
+ */
+router.post(
+  "/appointment/:appointmentId",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const paramParsed = appointmentIdParamSchema.safeParse(req.params);
+      if (!paramParsed.success) { next(toValidationError(paramParsed.error)); return; }
+
+      const bodyParsed = createPrescriptionSchema.safeParse(req.body);
+      if (!bodyParsed.success) { next(toValidationError(bodyParsed.error)); return; }
+
+      const { user } = req as AuthenticatedRequest;
+      if (!user) { next(new Error("Authentication required")); return; }
+
+      const result = await prescriptionsService.createPrescription(
+        paramParsed.data.appointmentId,
+        user.sub,
+        user.role,
+        bodyParsed.data,
+      );
+      res.status(201).json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
+ * GET /prescriptions/appointment/:appointmentId
+ * List prescriptions for an appointment (doctor or patient of that appointment).
+ */
+router.get(
+  "/appointment/:appointmentId",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const paramParsed = appointmentIdParamSchema.safeParse(req.params);
+      if (!paramParsed.success) { next(toValidationError(paramParsed.error)); return; }
+
+      const { user } = req as AuthenticatedRequest;
+      if (!user) { next(new Error("Authentication required")); return; }
+
+      const result = await prescriptionsService.listByAppointment(
+        paramParsed.data.appointmentId,
+        user.sub,
+        user.role,
+      );
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
+ * GET /prescriptions/mine
+ * All prescriptions for the logged-in patient (or written by the logged-in doctor).
+ */
+router.get(
+  "/mine",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { user } = req as AuthenticatedRequest;
+      if (!user) { next(new Error("Authentication required")); return; }
+      const result = await prescriptionsService.listForUser(user.sub, user.role);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
  * GET /prescriptions/:id
- * Get a prescription by ID. Doctor, patient, or admin with access to that prescription.
+ * Get a prescription by ID.
  */
 router.get(
   "/:id",
@@ -16,25 +97,17 @@ router.get(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = prescriptionIdParamSchema.safeParse(req.params);
-      if (!parsed.success) {
-        next(toValidationError(parsed.error));
-        return;
-      }
+      if (!parsed.success) { next(toValidationError(parsed.error)); return; }
+
       const { user } = req as AuthenticatedRequest;
-      if (!user) {
-        next(new Error("Authentication required"));
-        return;
-      }
-      const result = await prescriptionsService.getById(
-        parsed.data.id,
-        user.sub,
-        user.role
-      );
+      if (!user) { next(new Error("Authentication required")); return; }
+
+      const result = await prescriptionsService.getById(parsed.data.id, user.sub, user.role);
       res.json(result);
     } catch (e) {
       next(e);
     }
-  }
+  },
 );
 
 export { router as prescriptionsRouter };

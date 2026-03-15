@@ -1,159 +1,327 @@
 "use client";
 
-import React from 'react';
-import { FileText, Download, Search, Filter, Calendar, User, ArrowRight, ChevronRight, CheckCircle2 } from 'lucide-react';
-import { MOCK_RECORDS } from '@/constants';
-import { motion } from 'motion/react';
+import React, { useState } from "react";
+import {
+  Download, Search, Calendar, Loader2,
+  AlertCircle, Pill, ClipboardList, ChevronDown, ChevronUp, CheckCircle2
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { prescriptionsApi, type Prescription } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 
-const RecordCard = ({ record }: any) => (
-  <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-    <div className="flex items-start justify-between mb-8">
-      <div className="w-16 h-16 bg-brand-50 rounded-[24px] flex items-center justify-center group-hover:bg-brand-500 transition-colors duration-300">
-        <FileText className="w-8 h-8 text-brand-500 group-hover:text-white transition-colors duration-300" />
-      </div>
-      <button className="p-3 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-2xl transition-all">
-        <Download className="w-6 h-6" />
-      </button>
-    </div>
-    
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-        <Calendar className="w-3 h-3" /> {record.date}
-      </div>
-      <h4 className="text-xl font-bold text-slate-900 group-hover:text-brand-600 transition-colors">{record.diagnosis}</h4>
-      <div className="flex items-center gap-3 py-4 border-y border-slate-50">
-        <img src={`https://picsum.photos/seed/${record.doctorName}/100/100`} className="w-10 h-10 rounded-xl object-cover" alt="Doctor" referrerPolicy="no-referrer" />
-        <div>
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Doctor</p>
-          <p className="text-sm font-bold text-slate-900">{record.doctorName}</p>
+// ─── Canvas prescription generator ───────────────────────────────────────────
+
+async function downloadPrescriptionPng(rx: Prescription): Promise<void> {
+  const doctorName = rx.doctor?.user.name ?? "Doctor";
+  const specialization = rx.doctor?.specialization ?? "";
+  const date = format(new Date(rx.createdAt), "dd MMM yyyy");
+  const W = 800;
+  const PAD = 48;
+
+  const validMeds = rx.items.filter(i => i.drugName?.trim());
+  const medsH = validMeds.length * 56 + 60;
+  const notesH = rx.notes?.trim() ? Math.ceil((rx.notes.length) / 90) * 20 + 80 : 0;
+  const totalH = 240 + medsH + notesH + 80;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = totalH;
+  const ctx = canvas.getContext("2d")!;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, totalH);
+  ctx.fillStyle = "#0ea5e9";
+  ctx.fillRect(0, 0, W, 6);
+
+  let y = 44;
+
+  ctx.fillStyle = "#0ea5e9";
+  ctx.font = "bold 36px Georgia, serif";
+  ctx.fillText("℞", PAD, y + 28);
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "12px Arial, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText("TeleCare Medical Consultation", W - PAD, y + 10);
+  ctx.textAlign = "left";
+
+  y += 52;
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 18px Arial, sans-serif";
+  ctx.fillText(`Dr. ${doctorName}`, PAD, y);
+  ctx.fillStyle = "#64748b";
+  ctx.font = "13px Arial, sans-serif";
+  ctx.fillText(specialization, PAD, y + 20);
+
+  y += 50;
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+
+  y += 22;
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 10px Arial, sans-serif";
+  ctx.fillText("DATE", PAD, y);
+  y += 16;
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "bold 15px Arial, sans-serif";
+  ctx.fillText(date, PAD, y);
+
+  y += 28;
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+  y += 24;
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 10px Arial, sans-serif";
+  ctx.fillText("MEDICINES", PAD, y);
+  y += 22;
+
+  validMeds.forEach(med => {
+    ctx.fillStyle = "#0ea5e9";
+    ctx.beginPath(); ctx.arc(PAD + 5, y + 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 14px Arial, sans-serif";
+    ctx.fillText(med.drugName, PAD + 18, y + 9);
+    y += 24;
+    const parts: string[] = [];
+    if (med.dosage) parts.push(`Dosage: ${med.dosage}`);
+    if (med.frequency) parts.push(`Frequency: ${med.frequency}`);
+    if (med.duration) parts.push(`Duration: ${med.duration}`);
+    if (parts.length) {
+      ctx.fillStyle = "#64748b";
+      ctx.font = "12px Arial, sans-serif";
+      ctx.fillText(parts.join("   ·   "), PAD + 18, y);
+      y += 18;
+    }
+    y += 12;
+  });
+
+  if (rx.notes?.trim()) {
+    y += 8;
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+    y += 22;
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "bold 10px Arial, sans-serif";
+    ctx.fillText("DOCTOR'S ADVICE", PAD, y);
+    y += 18;
+    ctx.fillStyle = "#475569";
+    ctx.font = "italic 13px Arial, sans-serif";
+    const words = rx.notes.split(" ");
+    let line = "";
+    for (const word of words) {
+      const test = line + word + " ";
+      if (ctx.measureText(test).width > W - PAD * 2 && line) {
+        ctx.fillText(line.trim(), PAD, y); line = word + " "; y += 20;
+      } else { line = test; }
+    }
+    if (line.trim()) { ctx.fillText(line.trim(), PAD, y); y += 20; }
+    y += 10;
+  }
+
+  y += 24;
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+  y += 18;
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "11px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Digital prescription generated via TeleCare • Not a substitute for professional medical advice", W / 2, y);
+
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `prescription-${rx.id.slice(0, 8)}.png`; a.click();
+    URL.revokeObjectURL(url);
+  }, "image/png");
+}
+
+// ─── Prescription card ────────────────────────────────────────────────────────
+
+function PrescriptionCard({ rx }: { rx: Prescription }) {
+  const [expanded, setExpanded] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try { await downloadPrescriptionPng(rx); }
+    finally { setDownloading(false); }
+  };
+
+  return (
+    <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+      {/* Card header */}
+      <div className="p-6 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-brand-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Pill className="w-6 h-6 text-brand-500" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-full">Prescription</span>
+            </div>
+            <p className="font-bold text-slate-900 text-sm">
+              Dr. {rx.doctor?.user.name ?? "Doctor"}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{rx.doctor?.specialization}</p>
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
+              <Calendar className="w-3 h-3" />
+              <span>{format(new Date(rx.createdAt), "MMM d, yyyy • h:mm a")}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            className="p-2.5 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+            title="Download prescription"
+          >
+            {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+          >
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
         </div>
       </div>
-      <div className="pt-4">
-        <button className="w-full py-4 bg-slate-50 text-slate-600 font-bold rounded-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-2 group">
-          View Full Report <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-        </button>
+
+      {/* Medicines preview (always shown, first 2) */}
+      <div className="px-6 pb-4 space-y-2">
+        {rx.items.slice(0, expanded ? undefined : 2).map(item => (
+          <div key={item.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
+            <CheckCircle2 className="w-4 h-4 text-brand-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-slate-800">{item.drugName}</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {[item.dosage, item.frequency, item.duration].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </div>
+        ))}
+        {!expanded && rx.items.length > 2 && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="text-xs font-bold text-brand-600 hover:text-brand-700 pl-1"
+          >
+            +{rx.items.length - 2} more medicine{rx.items.length - 2 > 1 ? "s" : ""}
+          </button>
+        )}
       </div>
+
+      {/* Expanded notes */}
+      <AnimatePresence>
+        {expanded && rx.notes && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-6 pb-6">
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">Doctor's Advice</p>
+                <p className="text-sm text-amber-900 leading-relaxed font-medium italic">"{rx.notes}"</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  </div>
-);
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MedicalRecords() {
+  const { token } = useAuth();
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["prescriptions", "mine"],
+    queryFn: () => prescriptionsApi.getMine(),
+    enabled: !!token,
+  });
+
+  const prescriptions = data?.prescriptions ?? [];
+
+  const filtered = search.trim()
+    ? prescriptions.filter(rx =>
+        rx.doctor?.user.name.toLowerCase().includes(search.toLowerCase()) ||
+        rx.items.some(i => i.drugName.toLowerCase().includes(search.toLowerCase())) ||
+        rx.doctor?.specialization.toLowerCase().includes(search.toLowerCase())
+      )
+    : prescriptions;
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-10"
+      className="space-y-8"
     >
-      {/* Header & Search */}
-      <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
-        <div className="w-full lg:w-1/2 relative group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search records, prescriptions, or doctors..." 
-            className="w-full pl-14 pr-6 py-5 bg-white border border-slate-200 rounded-[24px] focus:border-brand-500 outline-none transition-all font-medium text-lg shadow-sm"
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-1">Medical Records</h2>
+          <p className="text-slate-500 font-medium">
+            {isLoading ? "Loading..." : `${prescriptions.length} prescription${prescriptions.length !== 1 ? "s" : ""} from your consultations`}
+          </p>
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full lg:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by doctor or medicine..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-2xl focus:border-brand-500 outline-none transition-all font-medium text-sm shadow-sm"
           />
         </div>
-        <div className="flex items-center gap-3 w-full lg:w-auto">
-          <button className="flex-1 lg:flex-none px-8 py-5 bg-white border border-slate-200 text-slate-600 font-bold rounded-[24px] hover:bg-slate-50 transition-all flex items-center justify-center gap-3 active:scale-95">
-            <Filter className="w-5 h-5" /> Filter
-          </button>
-          <button className="flex-1 lg:flex-none px-8 py-5 bg-brand-500 text-white font-bold rounded-[24px] hover:bg-brand-600 transition-all shadow-xl shadow-brand-100 flex items-center justify-center gap-3 active:scale-95">
-            <Download className="w-5 h-5" /> Export All
-          </button>
+      </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex justify-center py-24">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
         </div>
-      </div>
+      )}
 
-      {/* Categories */}
-      <div className="flex items-center gap-4 overflow-x-auto pb-2 no-scrollbar">
-        {['All Records', 'Prescriptions', 'Lab Reports', 'Scans', 'Consultations'].map((cat, i) => (
-          <button
-            key={cat}
-            className={`px-8 py-4 rounded-2xl text-sm font-bold whitespace-nowrap transition-all ${
-              i === 0 
-                ? 'bg-slate-900 text-white shadow-xl' 
-                : 'bg-white text-slate-500 border border-slate-100 hover:bg-slate-50'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Records Grid */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-10">
-        {MOCK_RECORDS.map(record => (
-          <RecordCard key={record.id} record={record} />
-        ))}
-        {/* Placeholder for more records */}
-        <RecordCard record={{ id: 'r2', date: '2026-02-15', doctorName: 'Dr. Sarah Johnson', diagnosis: 'Annual Checkup' }} />
-        <RecordCard record={{ id: 'r3', date: '2026-01-20', doctorName: 'Dr. Emily White', diagnosis: 'Flu Vaccination' }} />
-      </div>
-
-      {/* Prescription Viewer Section (Example) */}
-      <div className="bg-white p-10 lg:p-16 rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden">
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between mb-12 gap-8">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-brand-500 rounded-[32px] flex items-center justify-center shadow-xl shadow-brand-100">
-                <FileText className="text-white w-10 h-10" />
-              </div>
-              <div>
-                <h3 className="text-3xl font-bold text-slate-900">Latest Prescription</h3>
-                <p className="text-slate-500 font-medium">From your consultation on March 10, 2026</p>
-              </div>
-            </div>
-            <button className="px-10 py-5 bg-slate-900 text-white font-bold rounded-[24px] hover:bg-slate-800 transition-all flex items-center gap-3 shadow-xl active:scale-95">
-              <Download className="w-5 h-5" /> Download PDF
-            </button>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-10">
-            <div className="space-y-8">
-              <div className="p-8 bg-slate-50 rounded-[32px] border border-slate-100">
-                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Medicines</h4>
-                <div className="space-y-6">
-                  {[
-                    { name: 'Hydrocortisone Cream', dosage: 'Apply twice daily', duration: '7 days' },
-                    { name: 'Cetirizine 10mg', dosage: '1 tablet daily', duration: '10 days' }
-                  ].map(med => (
-                    <div key={med.name} className="flex items-start gap-4">
-                      <div className="w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                        <CheckCircle2 className="text-white w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900">{med.name}</p>
-                        <p className="text-sm text-slate-500">{med.dosage} • {med.duration}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="space-y-8">
-              <div className="p-8 bg-slate-50 rounded-[32px] border border-slate-100">
-                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Doctor's Notes</h4>
-                <p className="text-slate-600 leading-relaxed font-medium italic">
-                  "Avoid harsh soaps and keep skin moisturized. Follow up if symptoms persist after 7 days. Ensure you complete the full course of Cetirizine even if itching stops."
-                </p>
-              </div>
-              <div className="flex items-center gap-4 p-6 bg-brand-50 rounded-[32px] border border-brand-100">
-                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-brand-500 shadow-sm">
-                  <Calendar className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-900">Follow-up Appointment</p>
-                  <p className="text-xs text-brand-600 font-bold uppercase tracking-wider">Scheduled for Mar 20, 2026</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Error */}
+      {isError && (
+        <div className="p-12 bg-red-50 rounded-[32px] text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+          <p className="text-red-600 font-bold">Failed to load records</p>
         </div>
-        {/* Background elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-brand-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-0"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-medical-soft rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 -z-0"></div>
-      </div>
+      )}
+
+      {/* Empty */}
+      {!isLoading && !isError && filtered.length === 0 && (
+        <div className="p-20 bg-white rounded-[40px] border border-dashed border-slate-200 text-center">
+          <ClipboardList className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h4 className="text-xl font-bold text-slate-900 mb-2">No prescriptions yet</h4>
+          <p className="text-slate-500">Prescriptions from your consultations will appear here.</p>
+        </div>
+      )}
+
+      {/* Prescriptions grid */}
+      {!isLoading && !isError && filtered.length > 0 && (
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filtered.map(rx => (
+            <PrescriptionCard key={rx.id} rx={rx} />
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }

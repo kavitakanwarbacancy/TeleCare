@@ -37,7 +37,7 @@ async function request<T>(
       useAuthStore.getState().logout();
     }
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message ?? body?.error?.message ?? "Request failed");
+    throw new Error(body?.error?.message ?? body?.message ?? "Request failed");
   }
 
   return res.json() as Promise<T>;
@@ -270,6 +270,7 @@ export interface FileRecord {
   sizeBytes: string;
   createdAt: string;
   uploadedBy: { id: string; name: string; role: string };
+  appointment?: { id: string; scheduledAt: string; reason: string | null } | null;
 }
 
 export const filesApi = {
@@ -295,5 +296,75 @@ export const filesApi = {
   getByAppointment: (appointmentId: string) =>
     request<FileRecord[]>(`/files/appointment/${appointmentId}`),
 
+  getAll: () => request<FileRecord[]>("/files/mine"),
+
+  fetchBlob: async (fileId: string): Promise<string> => {
+    const token = getToken();
+    const res = await fetch(`${API_BASE}/files/download/${fileId}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error("Failed to fetch file");
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  },
+
   getDownloadUrl: (fileId: string) => `${API_BASE}/files/download/${fileId}`,
+};
+
+// ─── Prescriptions ────────────────────────────────────────────────────────────
+
+export interface PrescriptionItem {
+  id: string;
+  drugName: string;
+  dosage: string | null;
+  frequency: string | null;
+  duration: string | null;
+  quantity: string | null;
+  instructions: string | null;
+}
+
+export interface Prescription {
+  id: string;
+  doctorId: string;
+  patientId: string;
+  appointmentId: string | null;
+  notes: string | null;
+  createdAt: string;
+  items: PrescriptionItem[];
+  doctor?: {
+    id: string;
+    specialization: string;
+    user: { id: string; name: string };
+  };
+  appointment?: {
+    id: string;
+    scheduledAt: string;
+    reason: string | null;
+  } | null;
+}
+
+export interface CreatePrescriptionInput {
+  notes?: string | null;
+  items: Array<{
+    drugName: string;
+    dosage?: string | null;
+    frequency?: string | null;
+    duration?: string | null;
+    quantity?: string | null;
+    instructions?: string | null;
+  }>;
+}
+
+export const prescriptionsApi = {
+  create: (appointmentId: string, data: CreatePrescriptionInput) =>
+    request<Prescription>(`/prescriptions/appointment/${appointmentId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getByAppointment: (appointmentId: string) =>
+    request<{ prescriptions: Prescription[] }>(`/prescriptions/appointment/${appointmentId}`),
+
+  getMine: () =>
+    request<{ prescriptions: Prescription[] }>("/prescriptions/mine"),
 };
