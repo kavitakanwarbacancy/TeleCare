@@ -9,6 +9,7 @@ import { prescriptionsRouter } from "../modules/prescriptions";
 import { filesRouter } from "../modules/files";
 import { videoRouter } from "../modules/video";
 import { adminRouter } from "../modules/admin";
+import { notificationsRouter } from "../modules/notifications";
 
 const apiRouter = Router();
 
@@ -26,5 +27,6 @@ apiRouter.use("/prescriptions", prescriptionsRouter);
 apiRouter.use("/files", filesRouter);
 apiRouter.use("/video", videoRouter);
 apiRouter.use("/admin", adminRouter);
+apiRouter.use("/notifications", notificationsRouter);
 
 export { apiRouter };

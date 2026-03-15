@@ -17,6 +17,8 @@ const doctorListSelect = {
   consultationFee: true,
   registrationNumber: true,
   degree: true,
+  city: true,
+  state: true,
   verified: true,
   isActive: true,
   user: {
@@ -26,6 +28,8 @@ const doctorListSelect = {
 
 export interface ListDoctorsParams {
   specialization?: string;
+  city?: string;
+  state?: string;
   verified?: boolean;
   page: number;
   limit: number;
@@ -41,6 +45,8 @@ export interface ListDoctorsResult {
     consultationFee: Prisma.Decimal | null;
     registrationNumber: string | null;
     degree: string | null;
+    city: string | null;
+    state: string | null;
     verified: boolean;
     isActive: boolean;
     user: { name: string; email: string };
@@ -51,13 +57,19 @@ export interface ListDoctorsResult {
 }
 
 export async function listDoctors(params: ListDoctorsParams): Promise<ListDoctorsResult> {
-  const { specialization, verified, page, limit } = params;
+  const { specialization, city, state, verified, page, limit } = params;
 
   const where: Prisma.DoctorProfileWhereInput = {
     isActive: true,
   };
   if (specialization?.trim()) {
     where.specialization = { contains: specialization.trim(), mode: "insensitive" };
+  }
+  if (city?.trim()) {
+    where.city = { contains: city.trim(), mode: "insensitive" };
+  }
+  if (state?.trim()) {
+    where.state = { contains: state.trim(), mode: "insensitive" };
   }
   if (verified !== undefined) {
     where.verified = verified;
@@ -128,6 +140,8 @@ export interface UpdateDoctorProfileData {
   consultationFee?: number | null;
   registrationNumber?: string | null;
   degree?: string | null;
+  city?: string | null;
+  state?: string | null;
   isActive?: boolean;
 }
 
@@ -146,6 +160,8 @@ export async function updateMyProfile(userId: string, data: UpdateDoctorProfileD
   if (data.consultationFee !== undefined) updateData.consultationFee = data.consultationFee;
   if (data.registrationNumber !== undefined) updateData.registrationNumber = data.registrationNumber;
   if (data.degree !== undefined) updateData.degree = data.degree;
+  if (data.city !== undefined) updateData.city = data.city;
+  if (data.state !== undefined) updateData.state = data.state;
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
   const updated = await prisma.doctorProfile.update({

@@ -36,7 +36,95 @@ const appointmentSelect = {
   },
 } as const;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+async function getDoctorId(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { doctorProfile: { select: { id: true } } },
+  });
+  return user?.doctorProfile?.id ?? null;
+}
+
+async function getPatientId(userId: string): Promise<string | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { patient: { select: { id: true } } },
+  });
+  return user?.patient?.id ?? null;
+}
+
+export type UpdateStatusResult = {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  scheduledAt: Date;
+  status: string;
+  reason: string | null;
+  createdAt: Date;
+  patientUserId: string;
+};
+
+/**
+ * Doctor confirms or declines an appointment. Only the appointment's doctor can set CONFIRMED or CANCELLED_BY_DOCTOR.
+ * Returns updated appointment and patientUserId for notification.
+ */
+export async function updateStatus(
+  appointmentId: string,
+  userId: string,
+  role: string,
+  status: "CONFIRMED" | "CANCELLED_BY_DOCTOR"
+): Promise<UpdateStatusResult> {
+  if (role !== "DOCTOR") {
+    serviceError("Only doctors can confirm or decline appointments", 403, "FORBIDDEN");
+  }
+
+  const doctorId = await getDoctorId(userId);
+  if (!doctorId) {
+    serviceError("Doctor profile not found", 404, "NOT_FOUND");
+  }
+
+  const appointment = await prisma.appointment.findUnique({
+    where: { id: appointmentId },
+    include: {
+      patient: { select: { userId: true } },
+    },
+  });
+
+  if (!appointment) {
+    serviceError("Appointment not found", 404, "NOT_FOUND");
+  }
+  if (appointment.doctorId !== doctorId) {
+    serviceError("You can only update status for your own appointments", 403, "FORBIDDEN");
+  }
+
+  const updated = await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { status },
+    include: { patient: { select: { userId: true } } },
+  });
+
+  return {
+    id: updated.id,
+    patientId: updated.patientId,
+    doctorId: updated.doctorId,
+    scheduledAt: updated.scheduledAt,
+    status: updated.status,
+    reason: updated.reason,
+    createdAt: updated.createdAt,
+    patientUserId: updated.patient.userId,
+  };
+}
+
+export type CreateAppointmentResult = {
+  id: string;
+  patientId: string;
+  doctorId: string;
+  scheduledAt: Date;
+  durationMinutes: number;
+  status: string;
+  reason: string | null;
+  createdAt: Date;
+  doctorUserId: string;
+};
 
 export interface CreateAppointmentData {
   doctorId: string;
@@ -57,12 +145,19 @@ export interface ListAppointmentsParams {
  * Book a new appointment.
  * - Resolves patient + doctor profiles from their user IDs.
  * - Rejects with 409 if the doctor already has an overlapping PENDING/CONFIRMED appointment.
+ * - Returns appointment and doctorUserId for APPOINTMENT_REQUESTED notification.
  */
-export async function createAppointment(patientUserId: string, data: CreateAppointmentData) {
+export async function createAppointment(
+  patientUserId: string,
+  data: CreateAppointmentData
+): Promise<CreateAppointmentResult> {
   const patient = await prisma.patient.findUnique({ where: { userId: patientUserId } });
   if (!patient) serviceError("Patient profile not found", 404, "NOT_FOUND");
 
-  const doctor = await prisma.doctorProfile.findUnique({ where: { id: data.doctorId } });
+  const doctor = await prisma.doctorProfile.findUnique({
+    where: { id: data.doctorId },
+    select: { id: true, userId: true, isActive: true },
+  });
   if (!doctor || !doctor.isActive) {
     serviceError("Doctor not found or not accepting appointments", 404, "NOT_FOUND");
   }
@@ -91,17 +186,29 @@ export async function createAppointment(patientUserId: string, data: CreateAppoi
     );
   }
 
-  return prisma.appointment.create({
+  const appointment = await prisma.appointment.create({
     data: {
-      patientId: patient!.id,
+      patientId: patient.id,
       doctorId: data.doctorId,
       scheduledAt,
       durationMinutes: data.durationMinutes,
       reason: data.reason ?? null,
       status: "PENDING",
     },
-    select: appointmentSelect,
+    include: { doctor: { select: { userId: true } } },
   });
+
+  return {
+    id: appointment.id,
+    patientId: appointment.patientId,
+    doctorId: appointment.doctorId,
+    scheduledAt: appointment.scheduledAt,
+    durationMinutes: appointment.durationMinutes,
+    status: appointment.status,
+    reason: appointment.reason,
+    createdAt: appointment.createdAt,
+    doctorUserId: appointment.doctor.userId,
+  };
 }
 
 // ─── List ─────────────────────────────────────────────────────────────────────
@@ -123,11 +230,11 @@ export async function listAppointments(
   if (role === "PATIENT") {
     const patient = await prisma.patient.findUnique({ where: { userId } });
     if (!patient) serviceError("Patient profile not found", 404, "NOT_FOUND");
-    where.patientId = patient!.id;
+    where.patientId = patient.id;
   } else if (role === "DOCTOR") {
     const doctor = await prisma.doctorProfile.findUnique({ where: { userId } });
     if (!doctor) serviceError("Doctor profile not found", 404, "NOT_FOUND");
-    where.doctorId = doctor!.id;
+    where.doctorId = doctor.id;
   }
 
   if (status) where.status = status;
@@ -158,8 +265,8 @@ export async function getAppointment(appointmentId: string, userId: string, role
   if (!appointment) serviceError("Appointment not found", 404, "NOT_FOUND");
 
   if (role !== "ADMIN") {
-    const isDoctor = appointment!.doctor.user.id === userId;
-    const isPatient = appointment!.patient.user.id === userId;
+    const isDoctor = appointment.doctor.user.id === userId;
+    const isPatient = appointment.patient.user.id === userId;
     if (!isDoctor && !isPatient) serviceError("Access denied", 403, "FORBIDDEN");
   }
 
@@ -186,8 +293,8 @@ export async function cancelAppointment(appointmentId: string, userId: string, r
 
   if (!appointment) serviceError("Appointment not found", 404, "NOT_FOUND");
 
-  const isDoctor = appointment!.doctor.user.id === userId;
-  const isPatient = appointment!.patient.user.id === userId;
+  const isDoctor = appointment.doctor.user.id === userId;
+  const isPatient = appointment.patient.user.id === userId;
 
   if (role !== "ADMIN" && !isDoctor && !isPatient) {
     serviceError("Access denied", 403, "FORBIDDEN");
@@ -198,9 +305,9 @@ export async function cancelAppointment(appointmentId: string, userId: string, r
     "CANCELLED_BY_PATIENT",
     "CANCELLED_BY_DOCTOR",
   ];
-  if (terminalStatuses.includes(appointment!.status as AppointmentStatus)) {
+  if (terminalStatuses.includes(appointment.status as AppointmentStatus)) {
     serviceError(
-      `Cannot cancel an appointment with status: ${appointment!.status}`,
+      `Cannot cancel an appointment with status: ${appointment.status}`,
       400,
       "BAD_REQUEST",
     );

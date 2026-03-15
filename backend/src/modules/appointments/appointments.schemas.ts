@@ -1,18 +1,31 @@
 import { z } from "zod";
 
-const uuid = z.string().uuid("Invalid ID format");
+const uuidSchema = z.string().uuid("Invalid ID format");
 
+/** URL param for appointment-scoped routes */
 export const appointmentIdParamSchema = z.object({
-  appointmentId: uuid,
+  appointmentId: uuidSchema,
 });
 
+/** Allowed status values when doctor confirms or declines */
+const doctorStatusSchema = z.enum(["CONFIRMED", "CANCELLED_BY_DOCTOR"]);
+
+export const updateStatusSchema = z.object({
+  status: doctorStatusSchema,
+});
+
+export type UpdateStatusBody = z.infer<typeof updateStatusSchema>;
+
+/** Body for patient creating a booking (request) */
 export const createAppointmentSchema = z.object({
-  doctorId: uuid,
+  doctorId: uuidSchema,
   /** ISO 8601 datetime string */
   scheduledAt: z.string().datetime({ message: "scheduledAt must be a valid ISO 8601 datetime" }),
   durationMinutes: z.number().int().min(15).max(120).default(30),
-  reason: z.string().max(500).optional().nullable(),
+  reason: z.string().max(1000).optional().nullable(),
 });
+
+export type CreateAppointmentBody = z.infer<typeof createAppointmentSchema>;
 
 export const listAppointmentsQuerySchema = z.object({
   status: z

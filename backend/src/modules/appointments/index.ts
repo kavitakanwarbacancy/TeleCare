@@ -1,15 +1,19 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../../middleware";
 import { toValidationError } from "../../utils/validation";
+import { emitToUser } from "../../notifications-emitter";
+import { prisma } from "../../db";
 import * as appointmentsService from "./appointments.service";
+import * as notificationsService from "../notifications/notifications.service";
 import * as prescriptionsService from "../prescriptions/prescriptions.service";
 import {
   appointmentIdParamSchema,
   createAppointmentSchema,
   listAppointmentsQuerySchema,
+  updateStatusSchema,
 } from "./appointments.schemas";
 import {
-  appointmentIdParamSchema as prescriptionParamSchema,
+  appointmentIdParamSchema as prescriptionAppointmentIdParamSchema,
   createPrescriptionSchema,
 } from "../prescriptions/prescriptions.schemas";
 
@@ -19,7 +23,7 @@ const router = Router();
 
 /**
  * POST /appointments
- * Book a new appointment. Patient only.
+ * Book a new appointment. Patient only. Doctor receives APPOINTMENT_REQUESTED notification.
  */
 router.post(
   "/",
@@ -27,16 +31,46 @@ router.post(
   requireRole("PATIENT"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const parsed = createAppointmentSchema.safeParse(req.body);
-      if (!parsed.success) return void next(toValidationError(parsed.error));
-
+      const bodyParsed = createAppointmentSchema.safeParse(req.body);
+      if (!bodyParsed.success) {
+        next(toValidationError(bodyParsed.error));
+        return;
+      }
       const { user } = req as AuthenticatedRequest;
-      const result = await appointmentsService.createAppointment(user!.sub, parsed.data);
-      res.status(201).json(result);
+      if (!user) {
+        next(new Error("Authentication required"));
+        return;
+      }
+      const result = await appointmentsService.createAppointment(
+        user.sub,
+        bodyParsed.data
+      );
+
+      const notification = await notificationsService.create(
+        result.doctorUserId,
+        "APPOINTMENT_REQUESTED",
+        {
+          title: "New appointment request",
+          body: "A patient has requested an appointment with you.",
+          metadata: { appointmentId: result.id },
+        }
+      );
+      emitToUser(result.doctorUserId, notification);
+
+      res.status(201).json({
+        id: result.id,
+        patientId: result.patientId,
+        doctorId: result.doctorId,
+        scheduledAt: result.scheduledAt,
+        durationMinutes: result.durationMinutes,
+        status: result.status,
+        reason: result.reason,
+        createdAt: result.createdAt,
+      });
     } catch (e) {
       next(e);
     }
-  },
+  }
 );
 
 /**
@@ -115,6 +149,71 @@ router.patch(
   },
 );
 
+/**
+ * PATCH /appointments/:appointmentId/status
+ * Doctor confirms or declines. Patient receives APPOINTMENT_CONFIRMED or APPOINTMENT_DECLINED notification.
+ */
+router.patch(
+  "/:appointmentId/status",
+  requireAuth,
+  requireRole("DOCTOR"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const paramParsed = appointmentIdParamSchema.safeParse(req.params);
+      if (!paramParsed.success) {
+        next(toValidationError(paramParsed.error));
+        return;
+      }
+      const bodyParsed = updateStatusSchema.safeParse(req.body);
+      if (!bodyParsed.success) {
+        next(toValidationError(bodyParsed.error));
+        return;
+      }
+      const { user } = req as AuthenticatedRequest;
+      if (!user) {
+        next(new Error("Authentication required"));
+        return;
+      }
+      const result = await appointmentsService.updateStatus(
+        paramParsed.data.appointmentId,
+        user.sub,
+        user.role,
+        bodyParsed.data.status
+      );
+
+      const notifType = result.status === "CONFIRMED" ? "APPOINTMENT_CONFIRMED" : "APPOINTMENT_DECLINED";
+      const title = result.status === "CONFIRMED" ? "Appointment confirmed" : "Appointment declined";
+      const body =
+        result.status === "CONFIRMED"
+          ? "Your appointment has been confirmed."
+          : "Your appointment request was declined.";
+
+      const notification = await notificationsService.create(
+        result.patientUserId,
+        notifType,
+        {
+          title,
+          body,
+          metadata: { appointmentId: paramParsed.data.appointmentId },
+        }
+      );
+      emitToUser(result.patientUserId, notification);
+
+      res.json({
+        id: result.id,
+        patientId: result.patientId,
+        doctorId: result.doctorId,
+        scheduledAt: result.scheduledAt,
+        status: result.status,
+        reason: result.reason,
+        createdAt: result.createdAt,
+      });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
+
 // ─── Prescriptions (nested under appointment) ─────────────────────────────────
 
 /**
@@ -126,9 +225,11 @@ router.get(
   requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const parsed = prescriptionParamSchema.safeParse(req.params);
-      if (!parsed.success) return void next(toValidationError(parsed.error));
-
+      const parsed = prescriptionAppointmentIdParamSchema.safeParse(req.params);
+      if (!parsed.success) {
+        next(toValidationError(parsed.error));
+        return;
+      }
       const { user } = req as AuthenticatedRequest;
       const result = await prescriptionsService.listByAppointment(
         parsed.data.appointmentId,
@@ -145,6 +246,7 @@ router.get(
 /**
  * POST /appointments/:appointmentId/prescriptions
  * Create prescription for an appointment. Doctor only; must be the appointment's doctor.
+ * Patient receives PRESCRIPTION_CREATED notification.
  */
 router.post(
   "/:appointmentId/prescriptions",
@@ -152,9 +254,11 @@ router.post(
   requireRole("DOCTOR"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const paramParsed = prescriptionParamSchema.safeParse(req.params);
-      if (!paramParsed.success) return void next(toValidationError(paramParsed.error));
-
+      const paramParsed = prescriptionAppointmentIdParamSchema.safeParse(req.params);
+      if (!paramParsed.success) {
+        next(toValidationError(paramParsed.error));
+        return;
+      }
       const bodyParsed = createPrescriptionSchema.safeParse(req.body);
       if (!bodyParsed.success) return void next(toValidationError(bodyParsed.error));
 
@@ -165,6 +269,28 @@ router.post(
         user!.role,
         bodyParsed.data,
       );
+
+      // Notify patient in-app (and real-time via Socket.io)
+      const patient = await prisma.patient.findUnique({
+        where: { id: result.patientId },
+        select: { userId: true },
+      });
+      if (patient) {
+        const notification = await notificationsService.create(
+          patient.userId,
+          "PRESCRIPTION_CREATED",
+          {
+            title: "New prescription",
+            body: "Your doctor has added a prescription for this appointment.",
+            metadata: {
+              prescriptionId: result.id,
+              appointmentId: paramParsed.data.appointmentId,
+            },
+          }
+        );
+        emitToUser(patient.userId, notification);
+      }
+
       res.status(201).json(result);
     } catch (e) {
       next(e);

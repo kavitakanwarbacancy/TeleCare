@@ -2,12 +2,17 @@ import "dotenv/config";
 import http from "http";
 import { app } from "./app";
 import { config } from "./config";
+import { setNotificationEmitter } from "./notifications-emitter";
 import { initializeSocket } from "./socket";
 
 const { port } = config;
 
 const server = http.createServer(app);
 const io = initializeSocket(server);
+
+setNotificationEmitter((userId, payload) => {
+  io.to(`user:${userId}`).emit("notification", payload);
+});
 
 server.listen(port, () => {
   console.log(`[TeleCare] Server running on port ${port} (${config.nodeEnv})`);

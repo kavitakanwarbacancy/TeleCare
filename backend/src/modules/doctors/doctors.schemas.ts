@@ -4,6 +4,8 @@ const uuidSchema = z.string().uuid("Invalid doctor ID format");
 
 export const listDoctorsQuerySchema = z.object({
   specialization: z.string().max(200).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
   verified: z
     .string()
     .optional()
@@ -29,5 +31,7 @@ export const updateDoctorProfileSchema = z.object({
   consultationFee: z.number().min(0).optional().nullable(),
   registrationNumber: z.string().max(100).optional().nullable(),
   degree: z.string().max(100).optional().nullable(),
+  city: z.string().max(100).optional().nullable(),
+  state: z.string().max(100).optional().nullable(),
   isActive: z.boolean().optional(),
 });

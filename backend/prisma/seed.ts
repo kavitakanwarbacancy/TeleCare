@@ -31,6 +31,8 @@ async function main() {
       experienceYears: 8,
       bio: "Experienced general practitioner focused on preventive care and chronic disease management. Committed to patient education and holistic wellness.",
       consultationFee: 50,
+      city: "Bangalore",
+      state: "Karnataka",
       availability: availability("09:00", "17:00", [1, 2, 3, 4, 5]), // Mon–Fri
     },
     {
@@ -40,6 +42,8 @@ async function main() {
       experienceYears: 15,
       bio: "Board-certified cardiologist specialising in heart failure, arrhythmia, and preventive cardiology. Published researcher with 40+ peer-reviewed papers.",
       consultationFee: 150,
+      city: "Mumbai",
+      state: "Maharashtra",
       availability: availability("10:00", "16:00", [1, 3, 5]), // Mon/Wed/Fri
     },
     {
@@ -49,6 +53,8 @@ async function main() {
       experienceYears: 6,
       bio: "Dermatologist specialising in acne, eczema, psoriasis, and cosmetic procedures. Passionate about skin health for all skin types.",
       consultationFee: 100,
+      city: "Delhi",
+      state: "Delhi",
       availability: availability("11:00", "17:00", [2, 4]), // Tue/Thu
     },
     {
@@ -58,6 +64,8 @@ async function main() {
       experienceYears: 10,
       bio: "Paediatrician providing compassionate care for newborns through adolescents. Special interest in developmental milestones and childhood nutrition.",
       consultationFee: 75,
+      city: "Bangalore",
+      state: "Karnataka",
       availability: availability("08:00", "14:00", [1, 2, 3, 4, 5]), // Mon–Fri
     },
     {
@@ -67,6 +75,8 @@ async function main() {
       experienceYears: 12,
       bio: "Neurologist with expertise in migraines, epilepsy, and multiple sclerosis. Uses evidence-based approaches and telemedicine-friendly treatment plans.",
       consultationFee: 200,
+      city: "Chennai",
+      state: "Tamil Nadu",
       availability: availability("14:00", "19:00", [1, 2, 3]), // Mon/Tue/Wed
     },
   ];
@@ -91,6 +101,8 @@ async function main() {
             experienceYears: d.experienceYears,
             bio: d.bio,
             consultationFee: d.consultationFee,
+            city: d.city ?? null,
+            state: d.state ?? null,
             verified: true,
             isActive: true,
           },
