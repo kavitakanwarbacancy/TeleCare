@@ -30,7 +30,10 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("auth-token")?.value;
 
   const isPublic =
-    PUBLIC_PATHS.includes(pathname) || pathname.startsWith("/reset-password");
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname.startsWith("/reset-password") ||
+    pathname === "/doctors" ||
+    pathname.startsWith("/doctors/");
 
   // ── Public paths ────────────────────────────────────────────────────────────
   if (isPublic) {

@@ -1,14 +1,18 @@
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Search, Star, Clock, MapPin, ArrowRight, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { useQuery } from '@tanstack/react-query';
-import { doctorsApi, type DoctorSummary } from '@/services/api';
+import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { Search, Star, Clock, MapPin, ArrowRight, Loader2, ChevronDown } from "lucide-react";
+import { motion } from "motion/react";
+import { useQuery } from "@tanstack/react-query";
+import { doctorsApi, type DoctorSummary } from "@/services/api";
+import { getStates, getCities } from "@/constants/india-locations";
+import { SPECIALTIES } from "@/constants/specialties";
 
-const SPECIALTIES = ['All', 'Cardiology', 'Dermatology', 'Pediatrics', 'Neurology', 'General'];
+const SELECT_CLASS =
+  "w-full appearance-none pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm disabled:opacity-60 disabled:cursor-not-allowed";
 
 function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
   return (
@@ -34,12 +38,17 @@ function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
             </div>
           </div>
           <p className="text-sm font-semibold text-brand-600 mb-2">{doctor.specialization}</p>
-          <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-4 text-xs text-slate-500 font-medium flex-wrap">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {doctor.experienceYears ? `${doctor.experienceYears} Yrs Exp.` : 'Experienced'}
+              {doctor.experienceYears ? `${doctor.experienceYears} Yrs Exp.` : "Experienced"}
             </span>
-            <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Online</span>
+            {(doctor.city || doctor.state) && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {[doctor.city, doctor.state].filter(Boolean).join(", ") || "Online"}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -63,14 +72,43 @@ function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
 }
 
 export default function DoctorDiscovery() {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = React.useState('All');
+  const searchParams = useSearchParams();
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedSpecialty, setSelectedSpecialty] = React.useState("All");
+  const [selectedStateCode, setSelectedStateCode] = React.useState("");
+  const [selectedCity, setSelectedCity] = React.useState("");
+
+  React.useEffect(() => {
+    const stateCode = searchParams.get("stateCode");
+    const city = searchParams.get("city");
+    const specialty = searchParams.get("specialty");
+    if (stateCode) setSelectedStateCode(stateCode);
+    if (city) setSelectedCity(city);
+    if (specialty && SPECIALTIES.includes(specialty as (typeof SPECIALTIES)[number])) setSelectedSpecialty(specialty);
+  }, [searchParams]);
+
+  const states = React.useMemo(() => getStates(), []);
+  const selectedStateName = React.useMemo(
+    () => states.find((s) => s.isoCode === selectedStateCode)?.name ?? "",
+    [states, selectedStateCode],
+  );
+  const citiesForState = React.useMemo(
+    () => (selectedStateCode ? getCities(selectedStateCode) : []),
+    [selectedStateCode],
+  );
+
+  const onStateChange = (stateCode: string) => {
+    setSelectedStateCode(stateCode);
+    setSelectedCity("");
+  };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['doctors', selectedSpecialty],
+    queryKey: ["doctors", selectedSpecialty, selectedStateName, selectedCity],
     queryFn: () =>
       doctorsApi.list({
-        specialization: selectedSpecialty !== 'All' ? selectedSpecialty : undefined,
+        specialization: selectedSpecialty !== "All" ? selectedSpecialty : undefined,
+        state: selectedStateName || undefined,
+        city: selectedCity || undefined,
         limit: 50,
       }),
   });
@@ -92,7 +130,7 @@ export default function DoctorDiscovery() {
       className="space-y-10"
     >
       {/* Search & Filter */}
-      <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+      <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
         <div className="flex-1 w-full relative group">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
           <input
@@ -104,15 +142,62 @@ export default function DoctorDiscovery() {
           />
         </div>
 
-        <div className="flex items-center gap-3 mt-8 overflow-x-auto pb-2 no-scrollbar">
+        {/* State & City dropdowns */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="state-select" className="block text-sm font-bold text-slate-700 mb-2">
+              State
+            </label>
+            <div className="relative">
+              <select
+                id="state-select"
+                value={selectedStateCode}
+                onChange={(e) => onStateChange(e.target.value)}
+                className={SELECT_CLASS}
+              >
+                <option value="">All states</option>
+                {states.map((state) => (
+                  <option key={state.isoCode} value={state.isoCode}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="city-select" className="block text-sm font-bold text-slate-700 mb-2">
+              City
+            </label>
+            <div className="relative">
+              <select
+                id="city-select"
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                disabled={!selectedStateCode}
+                className={SELECT_CLASS}
+              >
+                <option value="">All cities</option>
+                {citiesForState.map((city) => (
+                  <option key={city.name} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
           {SPECIALTIES.map((s) => (
             <button
               key={s}
               onClick={() => setSelectedSpecialty(s)}
               className={`px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
                 selectedSpecialty === s
-                  ? 'bg-brand-500 text-white shadow-lg shadow-brand-100'
-                  : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                  ? "bg-brand-500 text-white shadow-lg shadow-brand-100"
+                  : "bg-slate-50 text-slate-500 hover:bg-slate-100"
               }`}
             >
               {s}
@@ -124,7 +209,7 @@ export default function DoctorDiscovery() {
       {/* Results */}
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-slate-900 px-2">
-          {isLoading ? 'Loading...' : `${filtered.length} Specialists Found`}
+          {isLoading ? "Loading..." : `${filtered.length} Specialists Found`}
         </h3>
 
         {isLoading && (

@@ -75,6 +75,8 @@ export interface DoctorSummary {
   experienceYears: number | null;
   bio: string | null;
   consultationFee: string | null;
+  city: string | null;
+  state: string | null;
   verified: boolean;
   isActive: boolean;
   user: { name: string; email: string };
@@ -90,10 +92,18 @@ export interface AvailabilitySlot {
 }
 
 export const doctorsApi = {
-  list: (params?: { specialization?: string; page?: number; limit?: number }) =>
+  list: (params?: {
+    specialization?: string;
+    city?: string;
+    state?: string;
+    page?: number;
+    limit?: number;
+  }) =>
     request<{ data: DoctorSummary[]; total: number; page: number; limit: number }>("/doctors", {
       params: {
         ...(params?.specialization ? { specialization: params.specialization } : {}),
+        ...(params?.city ? { city: params.city } : {}),
+        ...(params?.state ? { state: params.state } : {}),
         ...(params?.page ? { page: String(params.page) } : {}),
         ...(params?.limit ? { limit: String(params.limit) } : {}),
       },

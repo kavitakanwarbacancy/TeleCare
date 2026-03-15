@@ -51,7 +51,7 @@ export const config = {
   },
   dailyApiKey: process.env.DAILY_API_KEY ?? "",
   dailyDomain: process.env.DAILY_DOMAIN ?? "",
-  frontendUrl: process.env.FRONTEND_URL ?? "",
+  frontendUrl: process.env.FRONTEND_URL ?? appBaseUrl,
 } as const;
 
 if (config.nodeEnv === "production" && !config.jwtSecret) {

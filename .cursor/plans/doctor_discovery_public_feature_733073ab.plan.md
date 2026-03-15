@@ -11,7 +11,7 @@ isProject: false
 
 - Public doctors browse and profile pages (no login required to view).
 - Filters: **location (city and state)** and **specialty**; results from backend via query params.
-- Card list and doctor profile with Book Appointment; if not logged in, redirect to login (with return URL); if logged in, go to existing patient booking flow.
+- **Unauthorized users: view only.** They must not interact other than viewing (no booking, no form submissions). On doctor **details** when **not logged in**: show **only doctor information** (name, photo, specialty, experience, bio, fee, etc.). Do **not** show appointment slots, availability, or any booking option. Optionally a single line/link "Sign in to book an appointment" that goes to login is allowed (so they know how to proceed). When logged in (patient), show "Book appointment" and link to existing patient booking flow.
 - No ratings, reviews, maps, insurance, or complex search.
 
 ---
@@ -114,12 +114,21 @@ isProject: false
 
 **5.2 Data**
 
-- Fetch **GET /doctors/:id** and **GET /doctors/:id/availability** (doctorsApi.getById, doctorsApi.getAvailability). Handle loading and 404 (doctor not found).
+- **When not logged in:** Fetch only **GET /doctors/:id** (doctorsApi.getById). Do **not** fetch or show availability. Handle loading and 404 (doctor not found).
+- **When logged in (patient):** May optionally fetch availability if you show a "Book appointment" link (booking happens on `/patient/doctors/<id>` so availability can be skipped on public profile).
 
-**5.3 UI**
+**5.3 UI – strict view-only for guests**
 
-- Show **full doctor details**: name, specialty, experience, city, bio, consultation fee, degree (if present).
-- **Availability**: use API response (weekday, startTime, endTime, slotDuration) and render in a simple list or “Available: Mon–Fri 9am–5pm” style summary; if API returns empty, show a short “Contact for availability” or mock line (MVP: mock is acceptable per requirements).
+- **When not logged in (unauthorized):**
+  - Show **only doctor information**: name, photo, specialty, experience, city/state, bio, consultation fee, degree (if present). No other interaction.
+  - Do **not** show: appointment slots, availability calendar, date/time picker, or any booking option/button.
+  - Optionally a single line or link: **"Sign in to book an appointment"** → `/login?from=/patient/doctors/<id>` (so users know how to proceed; this is not a booking action).
+- **When logged in (patient):**
+  - Same doctor info; add **"Book appointment"** → `/patient/doctors/<id>` (full booking flow there). No need to show slots on this public page.
+
+<!-- Old 5.3 availability/booking content removed: guests see only doctor info, no slots, no booking. -->
+
+- ~~**Availability** (do not show for guests): use API response (weekday, startTime, endTime, slotDuration) and render in a simple list or “Available: Mon–Fri 9am–5pm” style summary; if API returns empty, show a short “Contact for availability” or mock line (MVP: mock is acceptable per requirements).
 - **“Book Appointment”** button: same logic as list – not logged in → `/login?redirect=/doctors/<id>`; logged in → `/patient/doctors/<id>`.
 
 **5.4 Navigation**

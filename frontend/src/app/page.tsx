@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
     Stethoscope,
     Shield,
@@ -13,8 +14,16 @@ import {
     Users,
     Calendar,
     FileText,
+    Search,
+    MapPin,
+    ChevronDown,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getStates, getCities } from '@/constants/india-locations';
+import { SPECIALTIES } from '@/constants/specialties';
+
+const SELECT_CLASS =
+    'w-full appearance-none pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm disabled:opacity-60 disabled:cursor-not-allowed';
 
 const FeatureCard = ({
     icon: Icon,
@@ -33,6 +42,113 @@ const FeatureCard = ({
         <p className="text-slate-500 leading-relaxed">{description}</p>
     </div>
 );
+
+function FindDoctorsBlock() {
+    const router = useRouter();
+    const [stateCode, setStateCode] = React.useState('');
+    const [city, setCity] = React.useState('');
+    const [specialty, setSpecialty] = React.useState('All');
+
+    const states = React.useMemo(() => getStates(), []);
+    const cities = React.useMemo(() => (stateCode ? getCities(stateCode) : []), [stateCode]);
+    React.useEffect(() => setCity(''), [stateCode]);
+
+    const handleFindDoctors = () => {
+        const params = new URLSearchParams();
+        if (stateCode) params.set('stateCode', stateCode);
+        if (city) params.set('city', city);
+        if (specialty && specialty !== 'All') params.set('specialty', specialty);
+        router.push(`/doctors${params.toString() ? `?${params.toString()}` : ''}`);
+    };
+
+    return (
+        <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-slate-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-4 lg:gap-6">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label
+                            htmlFor="landing-state"
+                            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                        >
+                            <MapPin className="w-3.5 h-3.5 inline mr-1" /> State
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="landing-state"
+                                value={stateCode}
+                                onChange={(e) => setStateCode(e.target.value)}
+                                className={SELECT_CLASS}
+                            >
+                                <option value="">Select state</option>
+                                {states.map((s) => (
+                                    <option key={s.isoCode} value={s.isoCode}>
+                                        {s.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            htmlFor="landing-city"
+                            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                        >
+                            City
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="landing-city"
+                                value={city}
+                                onChange={(e) => setCity(e.target.value)}
+                                disabled={!stateCode}
+                                className={SELECT_CLASS}
+                            >
+                                <option value="">Select city</option>
+                                {cities.map((c) => (
+                                    <option key={c.name} value={c.name}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            htmlFor="landing-specialty"
+                            className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2"
+                        >
+                            <Stethoscope className="w-3.5 h-3.5 inline mr-1" /> Specialty
+                        </label>
+                        <div className="relative">
+                            <select
+                                id="landing-specialty"
+                                value={specialty}
+                                onChange={(e) => setSpecialty(e.target.value)}
+                                className={SELECT_CLASS}
+                            >
+                                {SPECIALTIES.map((s) => (
+                                    <option key={s} value={s}>
+                                        {s}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                        </div>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleFindDoctors}
+                    className="flex items-center justify-center gap-2 px-8 py-3.5 bg-brand-500 text-white font-bold rounded-xl shadow-lg shadow-brand-100 hover:bg-brand-600 transition-all active:scale-[0.98] whitespace-nowrap"
+                >
+                    <Search className="w-5 h-5" /> Find Doctors
+                </button>
+            </div>
+        </div>
+    );
+}
 
 export default function Landing() {
     return (
@@ -82,6 +198,16 @@ export default function Landing() {
                     </Link>
                 </div>
             </nav>
+
+            {/* Find Doctors (public results → /doctors) */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-10">
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Find a doctor</h2>
+                <p className="text-slate-500 mb-6 max-w-xl">
+                    Search by location and specialty. Results open on a separate page—no login
+                    required to browse.
+                </p>
+                <FindDoctorsBlock />
+            </section>
 
             {/* Hero Section */}
             <section className="relative pt-12 pb-24 lg:pt-24 lg:pb-40">

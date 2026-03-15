@@ -2,14 +2,24 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Stethoscope, Mail, Lock, ArrowRight, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
 import { authApi } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 
+/** Allow redirect after login only to these prefixes (avoid open redirect). */
+const ALLOWED_REDIRECT_PREFIXES = ['/patient/', '/doctor/', '/admin/', '/doctors'];
+
+function isSafeRedirect(path: string | null): path is string {
+  if (!path || !path.startsWith('/')) return false;
+  return ALLOWED_REDIRECT_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const from = searchParams.get('from');
 
   const { login } = useAuth();
   const [identifier, setIdentifier] = React.useState('');
@@ -49,7 +59,8 @@ export default function LoginPage() {
     try {
       const result = await authApi.login(identifier.trim(), password);
       login(result.token, result.user);
-      router.push(`/${result.user.role.toLowerCase()}/dashboard`);
+      const redirectTo = isSafeRedirect(from) ? from : `/${result.user.role.toLowerCase()}/dashboard`;
+      router.push(redirectTo);
     } catch (err) {
       setErrors({ form: err instanceof Error ? err.message : 'Login failed. Please try again.' });
     } finally {
