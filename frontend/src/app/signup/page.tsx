@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Stethoscope, Mail, Lock, User, ArrowRight, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
+import { authApi } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 const COUNTRY_OPTIONS = [
   '+91 (IND)',
@@ -34,16 +36,15 @@ export default function SignupPage() {
   const [mobile, setMobile] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [offersOptIn, setOffersOptIn] = React.useState(true);
-  const [acceptTerms, setAcceptTerms] = React.useState(false);
   const [errors, setErrors] = React.useState<{
     fullName?: string;
     mobile?: string;
     email?: string;
     password?: string;
-    acceptTerms?: string;
   }>({});
+  const { login } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   const validate = () => {
     const newErrors: {
@@ -51,7 +52,6 @@ export default function SignupPage() {
       mobile?: string;
       email?: string;
       password?: string;
-      acceptTerms?: string;
     } = {};
 
     if (!fullName.trim()) {
@@ -66,7 +66,9 @@ export default function SignupPage() {
       newErrors.mobile = 'Enter a valid 10-digit mobile number.';
     }
 
-    if (email.trim()) {
+    if (!email.trim()) {
+      newErrors.email = 'Email is required.';
+    } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
         newErrors.email = 'Enter a valid email address.';
@@ -79,25 +81,29 @@ export default function SignupPage() {
       newErrors.password = 'Password must be at least 8 characters.';
     }
 
-    if (!acceptTerms) {
-      newErrors.acceptTerms = 'You must agree to the terms to continue.';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!validate()) return;
 
     setIsSubmitting(true);
-    // Simulate OTP send + signup success, then redirect based on role
-    if (role === 'patient') {
-      router.push('/patient/dashboard');
-    } else {
-      router.push('/doctor/dashboard');
+    setFormError(null);
+    try {
+      const result = await authApi.signup({
+        name: fullName.trim(),
+        email: email.trim(),
+        password,
+        role: role === 'doctor' ? 'DOCTOR' : 'PATIENT',
+      });
+      login(result.token, result.user);
+      router.push(`/${result.user.role.toLowerCase()}/dashboard`);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Sign up failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -253,12 +259,18 @@ export default function SignupPage() {
 
     
 
+            {formError && (
+              <p className="text-sm text-red-500 font-medium text-center bg-red-50 px-4 py-3 rounded-2xl">
+                {formError}
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={isSubmitting}
               className="w-full py-5 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 hover:shadow-brand-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Create Account
+              {isSubmitting ? 'Creating account...' : 'Create Account'}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>

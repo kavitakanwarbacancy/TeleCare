@@ -1,292 +1,263 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Image from 'next/image';
+import React from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { format } from "date-fns";
 import {
-    Search,
-    Filter,
-    MoreVertical,
-    Mail,
-    Phone,
-    Calendar,
-    History,
-    FileText,
-    Trash2,
-    Edit,
-    User,
-    Activity,
-} from 'lucide-react';
-import { motion } from 'motion/react';
+  Search, Video, Calendar, Mail, Loader2, Users,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useQuery } from "@tanstack/react-query";
+import { appointmentsApi, type Appointment } from "@/services/api";
+import { useAuth } from "@/hooks/useAuth";
 
-const MOCK_DOCTOR_PATIENTS = [
-    {
-        id: '1',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1 234 567 8901',
-        lastVisit: 'Mar 10, 2024',
-        condition: 'Hypertension',
-        status: 'Ongoing',
-        avatar: 'https://picsum.photos/seed/p1/100/100',
-    },
-    {
-        id: '2',
-        name: 'Emily Smith',
-        email: 'emily.s@example.com',
-        phone: '+1 234 567 8902',
-        lastVisit: 'Mar 08, 2024',
-        condition: 'Eczema',
-        status: 'Recovered',
-        avatar: 'https://picsum.photos/seed/p2/100/100',
-    },
-    {
-        id: '3',
-        name: 'Robert Brown',
-        email: 'robert.b@example.com',
-        phone: '+1 234 567 8903',
-        lastVisit: 'Feb 28, 2024',
-        condition: 'Diabetes Type 2',
-        status: 'Ongoing',
-        avatar: 'https://picsum.photos/seed/p3/100/100',
-    },
-    {
-        id: '4',
-        name: 'Sarah Wilson',
-        email: 'sarah.w@example.com',
-        phone: '+1 234 567 8904',
-        lastVisit: 'Mar 01, 2024',
-        condition: 'Fever',
-        status: 'Recovered',
-        avatar: 'https://picsum.photos/seed/p4/100/100',
-    },
-    {
-        id: '5',
-        name: 'Michael Chen',
-        email: 'michael.c@example.com',
-        phone: '+1 234 567 8905',
-        lastVisit: 'Mar 11, 2024',
-        condition: 'Acne',
-        status: 'Ongoing',
-        avatar: 'https://picsum.photos/seed/p5/100/100',
-    },
-];
+// ─── Derive unique patients from appointment list ─────────────────────────────
+
+interface PatientRow {
+  userId: string;
+  name: string;
+  email: string;
+  totalAppointments: number;
+  lastAppointmentAt: string;
+  lastStatus: string;
+  lastAppointmentId: string;
+}
+
+function buildPatientRows(appointments: Appointment[]): PatientRow[] {
+  const map = new Map<string, PatientRow>();
+
+  for (const appt of appointments) {
+    const uid = appt.patient.user.id;
+    const existing = map.get(uid);
+    const apptDate = new Date(appt.scheduledAt);
+
+    if (!existing || apptDate > new Date(existing.lastAppointmentAt)) {
+      map.set(uid, {
+        userId: uid,
+        name: appt.patient.user.name,
+        email: appt.patient.user.email,
+        totalAppointments: (existing?.totalAppointments ?? 0) + 1,
+        lastAppointmentAt: appt.scheduledAt,
+        lastStatus: appt.status,
+        lastAppointmentId: appt.id,
+      });
+    } else {
+      // Just increment count
+      map.set(uid, { ...existing, totalAppointments: existing.totalAppointments + 1 });
+    }
+  }
+
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.lastAppointmentAt).getTime() - new Date(a.lastAppointmentAt).getTime(),
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const isActive = status === "PENDING" || status === "CONFIRMED";
+  const isCompleted = status === "COMPLETED";
+  return (
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-bold ${
+        isActive
+          ? "bg-blue-50 text-blue-600"
+          : isCompleted
+          ? "bg-green-50 text-green-600"
+          : "bg-slate-100 text-slate-500"
+      }`}
+    >
+      {isActive ? "Active" : isCompleted ? "Completed" : "Cancelled"}
+    </span>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DoctorPatients() {
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-8"
-        >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 mb-2">My Patients</h2>
-                    <p className="text-slate-500 font-medium">
-                        View and manage your patient's medical history and records.
-                    </p>
-                </div>
-            </div>
+  const { user, token } = useAuth();
+  const [search, setSearch] = React.useState("");
 
-            {/* Search & Filter */}
-            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                <div className="flex-1 w-full relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Search by patient name, condition, or email..."
-                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none transition-all font-medium"
-                    />
-                </div>
-                <button className="w-full md:w-auto px-6 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
-                    <Filter className="w-5 h-5" /> Filter
-                </button>
-            </div>
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["appointments", user?.id, "all"],
+    queryFn: () => appointmentsApi.list({ limit: 200 }),
+    enabled: !!token,
+  });
 
-            {/* Patients Table - Desktop */}
-            <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-                <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100">
-                                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    Patient
-                                </th>
-                                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    Contact
-                                </th>
-                                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    Condition
-                                </th>
-                                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    Status
-                                </th>
-                                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    Last Visit
-                                </th>
-                                <th className="px-6 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {MOCK_DOCTOR_PATIENTS.map((patient) => (
-                                <tr
-                                    key={patient.id}
-                                    className="hover:bg-slate-50/50 transition-colors group"
-                                >
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className="relative w-12 h-12">
-                                                <Image
-                                                    src={patient.avatar}
-                                                    fill
-                                                    className="rounded-2xl object-cover shadow-sm"
-                                                    alt={patient.name}
-                                                    referrerPolicy="no-referrer"
-                                                />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-slate-900">
-                                                    {patient.name}
-                                                </p>
-                                                <p className="text-xs text-slate-500 font-medium">
-                                                    ID: #{patient.id}00{patient.id}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                                                <Mail className="w-3.5 h-3.5 text-slate-400" />{' '}
-                                                {patient.email}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                                                <Phone className="w-3.5 h-3.5 text-slate-400" />{' '}
-                                                {patient.phone}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-                                            <Activity className="w-4 h-4 text-brand-500" />{' '}
-                                            {patient.condition}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <span
-                                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                                patient.status === 'Recovered'
-                                                    ? 'bg-green-50 text-green-600'
-                                                    : 'bg-brand-50 text-brand-600'
-                                            }`}
-                                        >
-                                            {patient.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-5 text-sm font-bold text-slate-600">
-                                        {patient.lastVisit}
-                                    </td>
-                                    <td className="px-6 py-5">
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
-                                                title="View History"
-                                            >
-                                                <History className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                                className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                                title="View Records"
-                                            >
-                                                <FileText className="w-5 h-5" />
-                                            </button>
-                                            <button className="p-2 text-slate-400 hover:text-slate-600 rounded-xl transition-all">
-                                                <MoreVertical className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+  const patientRows = React.useMemo(
+    () => buildPatientRows(data?.data ?? []),
+    [data],
+  );
 
-                {/* Patients List - Mobile */}
-                <div className="md:hidden p-4 space-y-4">
-                    {MOCK_DOCTOR_PATIENTS.map((patient) => (
-                        <div
-                            key={patient.id}
-                            className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm space-y-3"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="relative w-12 h-12 flex-shrink-0">
-                                    <Image
-                                        src={patient.avatar}
-                                        fill
-                                        className="rounded-2xl object-cover shadow-sm"
-                                        alt={patient.name}
-                                        referrerPolicy="no-referrer"
-                                    />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-slate-900 truncate">{patient.name}</p>
-                                    <p className="text-xs text-slate-500 font-medium">
-                                        ID: #{patient.id}00{patient.id}
-                                    </p>
-                                </div>
-                                <span
-                                    className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                        patient.status === 'Recovered'
-                                            ? 'bg-green-50 text-green-600'
-                                            : 'bg-brand-50 text-brand-600'
-                                    }`}
-                                >
-                                    {patient.status}
-                                </span>
-                            </div>
-                            <div className="text-xs text-slate-600 space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                    <span className="truncate">{patient.email}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                    <span>{patient.phone}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Activity className="w-3.5 h-3.5 text-brand-500" />
-                                    <span className="font-semibold text-slate-700">
-                                        {patient.condition}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                    <span>Last visit: {patient.lastVisit}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-end gap-2 pt-2">
-                                <button
-                                    className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
-                                    title="View History"
-                                >
-                                    <History className="w-4 h-4" />
-                                </button>
-                                <button
-                                    className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                                    title="View Records"
-                                >
-                                    <FileText className="w-4 h-4" />
-                                </button>
-                                <button className="p-2 text-slate-400 hover:text-slate-600 rounded-xl transition-all">
-                                    <MoreVertical className="w-4 h-4" />
-                                </button>
-                            </div>
+  const filtered = search.trim()
+    ? patientRows.filter(
+        (p) =>
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          p.email.toLowerCase().includes(search.toLowerCase()),
+      )
+    : patientRows;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8"
+    >
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">Patient Records</h2>
+          <p className="text-slate-500 font-medium">
+            {isLoading ? "Loading..." : `${patientRows.length} patients across all your appointments`}
+          </p>
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full md:w-72">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search patients..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-100 rounded-2xl focus:border-brand-500 focus:bg-white outline-none transition-all font-medium text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <div className="flex justify-center py-24">
+          <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="p-12 bg-red-50 rounded-[40px] text-center">
+          <p className="text-red-500 font-bold">Failed to load patient records.</p>
+        </div>
+      )}
+
+      {!isLoading && !isError && filtered.length === 0 && (
+        <div className="p-20 bg-white rounded-[40px] border border-dashed border-slate-200 text-center">
+          <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+          <h4 className="text-xl font-bold text-slate-900 mb-2">No patients yet</h4>
+          <p className="text-slate-500">Patients who book appointments with you will appear here.</p>
+        </div>
+      )}
+
+      {/* Desktop table */}
+      {!isLoading && !isError && filtered.length > 0 && (
+        <>
+          <div className="hidden md:block bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="text-left px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Patient
+                  </th>
+                  <th className="text-left px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="text-left px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Last Visit
+                  </th>
+                  <th className="text-left px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Visits
+                  </th>
+                  <th className="text-left px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-8 py-5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filtered.map((patient) => (
+                  <tr key={patient.userId} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-12 h-12 flex-shrink-0">
+                          <Image
+                            src={`https://picsum.photos/seed/${patient.userId}/100/100`}
+                            alt={patient.name}
+                            fill
+                            className="rounded-2xl object-cover"
+                            referrerPolicy="no-referrer"
+                          />
                         </div>
-                    ))}
+                        <div>
+                          <p className="font-bold text-slate-900 group-hover:text-brand-600 transition-colors">
+                            {patient.name}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Mail className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate max-w-[160px]">{patient.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2 text-sm text-slate-600 font-medium">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        {format(new Date(patient.lastAppointmentAt), "MMM d, yyyy")}
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-sm font-bold text-slate-700">
+                        {patient.totalAppointments}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">
+                      <StatusPill status={patient.lastStatus} />
+                    </td>
+                    <td className="px-8 py-5">
+                      <Link
+                        href={`/doctor/consultation/${patient.lastAppointmentId}`}
+                        className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-brand-600 hover:bg-brand-50 rounded-xl transition-all"
+                      >
+                        <Video className="w-4 h-4" /> Join Last Call
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-4">
+            {filtered.map((patient) => (
+              <div
+                key={patient.userId}
+                className="bg-white p-6 rounded-[28px] border border-slate-100 shadow-sm"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative w-14 h-14 flex-shrink-0">
+                    <Image
+                      src={`https://picsum.photos/seed/${patient.userId}/100/100`}
+                      alt={patient.name}
+                      fill
+                      className="rounded-2xl object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 truncate">{patient.name}</p>
+                    <p className="text-xs text-slate-500 truncate">{patient.email}</p>
+                  </div>
+                  <StatusPill status={patient.lastStatus} />
                 </div>
-            </div>
-        </motion.div>
-    );
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Last visit: {format(new Date(patient.lastAppointmentAt), "MMM d, yyyy")}</span>
+                  <span className="font-bold">{patient.totalAppointments} visit{patient.totalAppointments !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
 }

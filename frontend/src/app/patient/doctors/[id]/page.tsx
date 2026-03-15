@@ -2,52 +2,116 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  Star, 
-  Clock, 
-  MapPin, 
-  Award, 
-  Users, 
-  Calendar, 
-  ChevronLeft, 
-  Video, 
-  MessageSquare, 
-  CheckCircle2,
-  Stethoscope,
-  Heart
+import {
+  Star, Clock, Award, Users, Calendar, ChevronLeft,
+  Video, CheckCircle2, Heart, Loader2, AlertCircle,
 } from 'lucide-react';
-import { MOCK_DOCTORS } from '@/constants';
 import { motion } from 'motion/react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, addDays, startOfDay, setHours, setMinutes } from 'date-fns';
+import { doctorsApi, appointmentsApi, type AvailabilitySlot } from '@/services/api';
 
-export default function DoctorProfile() {
-  const params = useParams();
-  const id = params?.id as string;
+// ─── Slot helpers ─────────────────────────────────────────────────────────────
+
+/** Generate time slot strings ("09:00 AM") for a given date from weekly availability. */
+function buildSlots(availability: AvailabilitySlot[], date: Date): string[] {
+  const weekday = date.getDay(); // 0 = Sun
+  const slots: string[] = [];
+
+  for (const a of availability.filter((x) => x.weekday === weekday)) {
+    const [sh, sm] = a.startTime.split(':').map(Number);
+    const [eh, em] = a.endTime.split(':').map(Number);
+    const step = (a.slotDuration || 30) + (a.bufferTime || 0);
+
+    let cursor = setMinutes(setHours(startOfDay(date), sh), sm);
+    const end = setMinutes(setHours(startOfDay(date), eh), em);
+
+    while (cursor < end) {
+      slots.push(format(cursor, 'hh:mm a'));
+      cursor = new Date(cursor.getTime() + step * 60_000);
+    }
+  }
+
+  return slots;
+}
+
+/** Convert a date + "hh:mm a" slot string into an ISO datetime. */
+function toISO(date: Date, slot: string): string {
+  const [time, period] = slot.split(' ');
+  const [h, m] = time.split(':').map(Number);
+  let hours = h % 12;
+  if (period === 'PM') hours += 12;
+  return setMinutes(setHours(startOfDay(date), hours), m).toISOString();
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function DoctorProfilePage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const doctor = MOCK_DOCTORS.find(d => d.id === id);
+  const qClient = useQueryClient();
+
+  const today = startOfDay(new Date());
+  const next7Days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+
+  const [selectedDate, setSelectedDate] = React.useState<Date>(today);
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
-  const [isBooking, setIsBooking] = React.useState(false);
+  const [reason, setReason] = React.useState('');
+  const [bookingError, setBookingError] = React.useState<string | null>(null);
 
-  if (!doctor) return <div className="p-20 text-center">Doctor not found</div>;
+  const { data: doctor, isLoading: loadingDoctor, isError: errorDoctor } = useQuery({
+    queryKey: ['doctor', id],
+    queryFn: () => doctorsApi.getById(id),
+    enabled: !!id,
+  });
 
-  const handleBook = () => {
-    if (!selectedSlot) return;
-    setIsBooking(true);
-    setTimeout(() => {
+  const { data: availData, isLoading: loadingSlots } = useQuery({
+    queryKey: ['doctor-availability', id],
+    queryFn: () => doctorsApi.getAvailability(id),
+    enabled: !!id,
+  });
+
+  const slots = availData ? buildSlots(availData.availability, selectedDate) : [];
+
+  // Reset slot on date change.
+  React.useEffect(() => { setSelectedSlot(null); }, [selectedDate]);
+
+  const bookMutation = useMutation({
+    mutationFn: () =>
+      appointmentsApi.book({
+        doctorId: id,
+        scheduledAt: toISO(selectedDate, selectedSlot!),
+        durationMinutes: 30,
+        reason: reason.trim() || undefined,
+      }),
+    onSuccess: () => {
+      qClient.invalidateQueries({ queryKey: ['appointments'] });
       router.push('/patient/appointments');
-    }, 1500);
-  };
+    },
+    onError: (err: Error) => setBookingError(err.message),
+  });
+
+  if (loadingDoctor) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (errorDoctor || !doctor) {
+    return <div className="p-20 text-center text-slate-500 font-bold">Doctor not found.</div>;
+  }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
       className="max-w-6xl mx-auto space-y-10"
     >
-      {/* Back Button */}
-      <button 
+      <button
         onClick={() => router.back()}
         className="flex items-center gap-2 text-slate-500 hover:text-brand-500 transition-colors font-bold group"
       >
@@ -56,14 +120,14 @@ export default function DoctorProfile() {
       </button>
 
       <div className="grid lg:grid-cols-3 gap-10">
-        {/* Left Column - Doctor Info */}
+        {/* Doctor info */}
         <div className="lg:col-span-2 space-y-10">
           <div className="bg-white p-10 rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden">
             <div className="flex flex-col md:flex-row gap-10 items-start relative z-10">
-              <div className="relative w-40 h-40">
-                <Image 
-                  src={doctor.avatar || `https://picsum.photos/seed/${doctor.id}/200/200`} 
-                  alt={doctor.name} 
+              <div className="relative w-40 h-40 flex-shrink-0">
+                <Image
+                  src={`https://picsum.photos/seed/${doctor.id}/200/200`}
+                  alt={doctor.user.name}
                   fill
                   className="rounded-[40px] object-cover border-8 border-slate-50 shadow-xl"
                   referrerPolicy="no-referrer"
@@ -72,106 +136,108 @@ export default function DoctorProfile() {
                   <CheckCircle2 className="text-white w-6 h-6" />
                 </div>
               </div>
+
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-4 mb-3">
-                  <h2 className="text-4xl font-bold text-slate-900">{doctor.name}</h2>
+                  <h2 className="text-4xl font-bold text-slate-900">{doctor.user.name}</h2>
                   <div className="flex items-center gap-1 text-amber-500 bg-amber-50 px-3 py-1 rounded-full text-sm font-bold">
-                    <Star className="w-4 h-4 fill-amber-500" /> {doctor.rating} ({doctor.reviewsCount} Reviews)
+                    <Star className="w-4 h-4 fill-amber-500" /> 4.8
                   </div>
                 </div>
                 <p className="text-xl font-bold text-brand-600 mb-6">{doctor.specialization}</p>
-                
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
-                  <div className="p-4 bg-slate-50 rounded-3xl text-center">
-                    <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-sm text-brand-500">
-                      <Award className="w-5 h-5" />
+                  {[
+                    { icon: Award, label: 'Experience', value: doctor.experienceYears ? `${doctor.experienceYears} Years` : '—' },
+                    { icon: Users, label: 'Patients', value: '1.2k+' },
+                    { icon: Heart, label: 'Rating', value: '4.8/5' },
+                  ].map(({ icon: Icon, label, value }) => (
+                    <div key={label} className="p-4 bg-slate-50 rounded-3xl text-center">
+                      <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-sm text-brand-500">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{label}</p>
+                      <p className="text-lg font-bold text-slate-900">{value}</p>
                     </div>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Experience</p>
-                    <p className="text-lg font-bold text-slate-900">{doctor.experience} Years</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-3xl text-center">
-                    <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-sm text-brand-500">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Patients</p>
-                    <p className="text-lg font-bold text-slate-900">1.2k+</p>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-3xl text-center">
-                    <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-sm text-brand-500">
-                      <Heart className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Rating</p>
-                    <p className="text-lg font-bold text-slate-900">4.9/5</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Background elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-brand-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-0"></div>
-          </div>
-
-          <div className="bg-white p-10 rounded-[48px] border border-slate-100 shadow-sm">
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">About Doctor</h3>
-            <p className="text-lg text-slate-500 leading-relaxed mb-10">
-              {doctor.about}
-            </p>
-            
-            <h3 className="text-2xl font-bold text-slate-900 mb-6">Specializations</h3>
-            <div className="flex flex-wrap gap-3">
-              {['Heart Failure', 'Non-Invasive Cardiology', 'Echocardiography', 'Hypertension'].map(spec => (
-                <span key={spec} className="px-6 py-3 bg-slate-50 text-slate-600 font-bold rounded-2xl text-sm">
-                  {spec}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Booking */}
-        <div className="space-y-8">
-          <div className="bg-white p-8 rounded-[48px] border border-slate-100 shadow-xl shadow-slate-100 sticky top-28">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-bold text-slate-900">Book Appointment</h3>
-              <div className="text-right">
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Fee</p>
-                <p className="text-2xl font-bold text-brand-600">${doctor.fee}</p>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div>
-                <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-brand-500" /> Select Date
-                </p>
-                <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                  {[15, 16, 17, 18, 19].map(day => (
-                    <button 
-                      key={day}
-                      className={`flex-shrink-0 w-16 h-20 rounded-3xl flex flex-col items-center justify-center transition-all ${
-                        day === 15 
-                          ? 'bg-brand-500 text-white shadow-lg shadow-brand-100' 
-                          : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                      }`}
-                    >
-                      <span className="text-xs font-bold uppercase">Mar</span>
-                      <span className="text-xl font-bold">{day}</span>
-                    </button>
                   ))}
                 </div>
               </div>
+            </div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-brand-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-0" />
+          </div>
 
-              <div>
-                <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-brand-500" /> Select Time Slot
+          {doctor.bio && (
+            <div className="bg-white p-10 rounded-[48px] border border-slate-100 shadow-sm">
+              <h3 className="text-2xl font-bold text-slate-900 mb-6">About Doctor</h3>
+              <p className="text-lg text-slate-500 leading-relaxed">{doctor.bio}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Booking panel */}
+        <div>
+          <div className="bg-white p-8 rounded-[48px] border border-slate-100 shadow-xl shadow-slate-100 sticky top-28 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-slate-900">Book Appointment</h3>
+              {doctor.consultationFee && (
+                <div className="text-right">
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Fee</p>
+                  <p className="text-2xl font-bold text-brand-600">
+                    ${Number(doctor.consultationFee).toFixed(0)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Date strip */}
+            <div>
+              <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-brand-500" /> Select Date
+              </p>
+              <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                {next7Days.map((d) => {
+                  const active = format(d, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+                  return (
+                    <button
+                      key={d.toISOString()}
+                      onClick={() => setSelectedDate(d)}
+                      className={`flex-shrink-0 w-16 h-20 rounded-3xl flex flex-col items-center justify-center transition-all ${
+                        active
+                          ? 'bg-brand-500 text-white shadow-lg shadow-brand-100'
+                          : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="text-xs font-bold uppercase">{format(d, 'MMM')}</span>
+                      <span className="text-xl font-bold">{format(d, 'd')}</span>
+                      <span className="text-xs font-medium">{format(d, 'EEE')}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Time slots */}
+            <div>
+              <p className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-brand-500" /> Select Time
+              </p>
+              {loadingSlots ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-5 h-5 text-brand-500 animate-spin" />
+                </div>
+              ) : slots.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">
+                  No slots on {format(selectedDate, 'MMM d')}
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  {doctor.availableSlots.map(slot => (
-                    <button 
+              ) : (
+                <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1">
+                  {slots.map((slot) => (
+                    <button
                       key={slot}
                       onClick={() => setSelectedSlot(slot)}
-                      className={`py-4 rounded-2xl text-sm font-bold transition-all border-2 ${
-                        selectedSlot === slot 
-                          ? 'bg-brand-50 border-brand-500 text-brand-600' 
+                      className={`py-3 rounded-2xl text-sm font-bold transition-all border-2 ${
+                        selectedSlot === slot
+                          ? 'bg-brand-50 border-brand-500 text-brand-600'
                           : 'bg-white border-slate-100 text-slate-500 hover:border-brand-200'
                       }`}
                     >
@@ -179,43 +245,59 @@ export default function DoctorProfile() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div className="pt-4 space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl">
-                  <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-brand-500">
-                    <Video className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-slate-900">Video Consultation</p>
-                    <p className="text-xs text-slate-500">Secure 1-on-1 video call</p>
-                  </div>
-                  <CheckCircle2 className="w-5 h-5 text-brand-500" />
-                </div>
-
-                <button 
-                  onClick={handleBook}
-                  disabled={!selectedSlot || isBooking}
-                  className={`w-full py-5 rounded-[24px] font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 ${
-                    !selectedSlot 
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                      : 'bg-brand-500 text-white shadow-brand-100 hover:bg-brand-600'
-                  }`}
-                >
-                  {isBooking ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Processing...
-                    </span>
-                  ) : (
-                    <>Confirm Booking <CheckCircle2 className="w-5 h-5" /></>
-                  )}
-                </button>
-                <p className="text-center text-xs text-slate-400 font-medium">
-                  No payment required now. Pay after consultation.
-                </p>
-              </div>
+              )}
             </div>
+
+            {/* Reason */}
+            <div>
+              <p className="text-sm font-bold text-slate-700 mb-2">Reason (optional)</p>
+              <textarea
+                rows={2}
+                placeholder="Brief description of your concern..."
+                className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none transition-all text-sm font-medium resize-none"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </div>
+
+            {/* Video badge */}
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl">
+              <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm text-brand-500">
+                <Video className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-slate-900">Video Consultation</p>
+                <p className="text-xs text-slate-500">Secure 1-on-1 video call</p>
+              </div>
+              <CheckCircle2 className="w-5 h-5 text-brand-500" />
+            </div>
+
+            {bookingError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 rounded-2xl text-red-500 text-sm font-medium">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {bookingError}
+              </div>
+            )}
+
+            <button
+              onClick={() => { setBookingError(null); bookMutation.mutate(); }}
+              disabled={!selectedSlot || bookMutation.isPending}
+              className={`w-full py-5 rounded-[24px] font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 ${
+                !selectedSlot
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : 'bg-brand-500 text-white shadow-brand-100 hover:bg-brand-600'
+              }`}
+            >
+              {bookMutation.isPending ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Booking...</>
+              ) : (
+                <>Confirm Booking <CheckCircle2 className="w-5 h-5" /></>
+              )}
+            </button>
+
+            <p className="text-center text-xs text-slate-400 font-medium">
+              No payment required now. Pay after consultation.
+            </p>
           </div>
         </div>
       </div>

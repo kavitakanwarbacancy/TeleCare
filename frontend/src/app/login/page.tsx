@@ -5,13 +5,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Stethoscope, Mail, Lock, ArrowRight, ChevronLeft } from 'lucide-react';
 import { motion } from 'motion/react';
+import { authApi } from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
 
+  const { login } = useAuth();
   const [identifier, setIdentifier] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [errors, setErrors] = React.useState<{ identifier?: string; password?: string }>({});
+  const [errors, setErrors] = React.useState<{ identifier?: string; password?: string; form?: string }>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const validate = () => {
@@ -37,14 +40,21 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!validate()) return;
 
     setIsSubmitting(true);
-    // Simulate successful login and redirect to patient dashboard
-    router.push('/patient/dashboard');
+    setErrors({});
+    try {
+      const result = await authApi.login(identifier.trim(), password);
+      login(result.token, result.user);
+      router.push(`/${result.user.role.toLowerCase()}/dashboard`);
+    } catch (err) {
+      setErrors({ form: err instanceof Error ? err.message : 'Login failed. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -127,12 +137,18 @@ export default function LoginPage() {
               )}
             </div>
 
+            {errors.form && (
+              <p className="text-sm text-red-500 font-medium text-center bg-red-50 px-4 py-3 rounded-2xl">
+                {errors.form}
+              </p>
+            )}
+
             <button
               type="submit"
               disabled={isSubmitting}
               className="w-full py-5 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 hover:shadow-brand-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Login
+              {isSubmitting ? 'Logging in...' : 'Login'}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>

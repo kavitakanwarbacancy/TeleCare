@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { Message } from "./api";
+import { useAuthStore } from "@/store/auth";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:4001";
 
@@ -25,7 +26,7 @@ class ConsultationSocket {
       return this.socket;
     }
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const token = useAuthStore.getState().token;
 
     this.socket = io(SOCKET_URL, {
       auth: { token },

@@ -318,8 +318,8 @@ export default function ConsultationRoom() {
     if (appointmentInfo?.isDoctor) {
       await videoApi.endSession(appointmentId);
     }
-    
-    router.back();
+
+    router.push(appointmentInfo?.isDoctor ? '/doctor/appointments' : '/patient/appointments');
   }, [appointmentId, appointmentInfo?.isDoctor, router]);
 
   // Handle send message
