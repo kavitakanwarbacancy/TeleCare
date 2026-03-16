@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import * as appointmentsService from "./appointments.service";
 import * as notificationsService from "../notifications/notifications.service";
 import * as prescriptionsService from "../prescriptions/prescriptions.service";
+import { sendAppointmentDeclined } from "../email/email.service";
 import {
   appointmentIdParamSchema,
   createAppointmentSchema,
@@ -178,26 +179,41 @@ router.patch(
         paramParsed.data.appointmentId,
         user.sub,
         user.role,
-        bodyParsed.data.status
+        bodyParsed.data.status,
+        bodyParsed.data.declineReason
       );
 
-      const notifType = result.status === "CONFIRMED" ? "APPOINTMENT_CONFIRMED" : "APPOINTMENT_DECLINED";
-      const title = result.status === "CONFIRMED" ? "Appointment confirmed" : "Appointment declined";
-      const body =
-        result.status === "CONFIRMED"
-          ? "Your appointment has been confirmed."
-          : "Your appointment request was declined.";
+      const isDeclined = result.status === "CANCELLED_BY_DOCTOR";
+      const noteType = isDeclined ? "APPOINTMENT_DECLINED" : "APPOINTMENT_CONFIRMED";
+      const noteTitle = isDeclined ? "Appointment request declined" : "Appointment confirmed";
+      const noteBody = isDeclined
+        ? `${result.doctorName.startsWith("Dr.") ? result.doctorName : `Dr. ${result.doctorName}`} declined your request. Reason: ${result.declineReason}`
+        : "Your appointment has been confirmed. You can now join the call at the scheduled time.";
 
       const notification = await notificationsService.create(
         result.patientUserId,
-        notifType,
+        noteType,
         {
-          title,
-          body,
-          metadata: { appointmentId: paramParsed.data.appointmentId },
+          title: noteTitle,
+          body: noteBody,
+          metadata: {
+            appointmentId: paramParsed.data.appointmentId,
+            ...(isDeclined ? { declineReason: result.declineReason } : {}),
+          },
         }
       );
       emitToUser(result.patientUserId, notification);
+
+      // Send email to patient for decline (fire-and-forget; don't block the response)
+      if (isDeclined && result.declineReason) {
+        sendAppointmentDeclined(
+          result.patientEmail,
+          result.patientName,
+          result.doctorName,
+          result.scheduledAt,
+          result.declineReason
+        ).catch((err) => console.error("Failed to send decline email:", err));
+      }
 
       res.json({
         id: result.id,
@@ -206,6 +222,7 @@ router.patch(
         scheduledAt: result.scheduledAt,
         status: result.status,
         reason: result.reason,
+        declineReason: result.declineReason,
         createdAt: result.createdAt,
       });
     } catch (e) {

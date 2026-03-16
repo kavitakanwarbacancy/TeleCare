@@ -169,6 +169,13 @@ class ConsultationSocket {
   isConnected(): boolean {
     return this.socket?.connected ?? false;
   }
+
+  /** Connect (if not already) and listen for real-time notification events. */
+  subscribeToNotifications(callback: (n: unknown) => void): () => void {
+    const socket = this.connect();
+    socket.on("notification", callback);
+    return () => socket.off("notification", callback);
+  }
 }
 
 export const consultationSocket = new ConsultationSocket();

@@ -28,11 +28,68 @@ export function buildPasswordResetEmail(
   return { subject, text, html };
 }
 
-/* Future template stubs (implement when features are built):
+export interface AppointmentDeclinedTemplatePayload {
+  to: string;
+  patientName: string;
+  doctorName: string;
+  scheduledAt: Date;
+  declineReason: string;
+}
+
+export function buildAppointmentDeclinedEmail(
+  payload: AppointmentDeclinedTemplatePayload
+): { subject: string; text: string; html: string } {
+  const { patientName, doctorName, scheduledAt, declineReason } = payload;
+  const dateStr = scheduledAt.toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+  const timeStr = scheduledAt.toLocaleTimeString("en-US", {
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const subject = "Your appointment request was declined";
+
+  const displayDoctor = doctorName.startsWith("Dr.") ? doctorName : `Dr. ${doctorName}`;
+  const text = `Hi ${patientName},\n\nUnfortunately, ${displayDoctor} has declined your appointment request scheduled for ${dateStr} at ${timeStr}.\n\nReason: ${declineReason}\n\nYou can book a new appointment with another available doctor on TeleCare.\n\nThe TeleCare Team`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 560px; margin: 0 auto; padding: 24px;">
+  <div style="background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <div style="background: #ef4444; padding: 24px 32px;">
+      <h1 style="color: white; margin: 0; font-size: 20px;">Appointment Declined</h1>
+    </div>
+    <div style="padding: 32px;">
+      <p>Hi <strong>${patientName}</strong>,</p>
+      <p>Unfortunately, <strong>${displayDoctor}</strong> has declined your appointment request.</p>
+
+      <div style="background: #f8fafc; border-radius: 8px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid #ef4444;">
+        <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Appointment Details</p>
+        <p style="margin: 0 0 4px;"><strong>Date:</strong> ${dateStr}</p>
+        <p style="margin: 0;"><strong>Time:</strong> ${timeStr}</p>
+      </div>
+
+      <div style="background: #fef2f2; border-radius: 8px; padding: 16px 20px; margin: 20px 0; border-left: 4px solid #ef4444;">
+        <p style="margin: 0 0 6px; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Reason for Declining</p>
+        <p style="margin: 0; color: #374151;">${declineReason}</p>
+      </div>
+
+      <p>You can book a new appointment with another available doctor on TeleCare.</p>
+      <p style="color: #64748b; font-size: 14px;">— The TeleCare Team</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  return { subject, text, html };
+}
+
+/* Future template stubs:
 export function buildSignupVerificationEmail(...): { subject, text, html } { ... }
 export function buildAppointmentConfirmationEmail(...): { subject, text, html } { ... }
 export function buildAppointmentReminderEmail(...): { subject, text, html } { ... }
 export function buildVideoCallLinkEmail(...): { subject, text, html } { ... }
-export function buildAppointmentCancelledEmail(...): { subject, text, html } { ... }
 export function buildAppointmentRescheduledEmail(...): { subject, text, html } { ... }
 */

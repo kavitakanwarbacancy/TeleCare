@@ -135,6 +135,7 @@ export interface Appointment {
   durationMinutes: number;
   status: string;
   reason: string | null;
+  declineReason: string | null;
   videoRoomId: string | null;
   meetingLink: string | null;
   sessionStartedAt: string | null;
@@ -168,6 +169,12 @@ export const appointmentsApi = {
 
   cancel: (id: string) =>
     request<Appointment>(`/appointments/${id}/cancel`, { method: "PATCH" }),
+
+  updateStatus: (id: string, status: "CONFIRMED" | "CANCELLED_BY_DOCTOR", declineReason?: string) =>
+    request<Appointment>(`/appointments/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, ...(declineReason ? { declineReason } : {}) }),
+    }),
 };
 
 // ─── Patients ─────────────────────────────────────────────────────────────────
@@ -367,4 +374,36 @@ export const prescriptionsApi = {
 
   getMine: () =>
     request<{ prescriptions: Prescription[] }>("/prescriptions/mine"),
+};
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  body: string | null;
+  read: boolean;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export const notificationsApi = {
+  list: (params?: { limit?: number; before?: string }) =>
+    request<{ notifications: AppNotification[] }>("/notifications", {
+      params: {
+        ...(params?.limit ? { limit: String(params.limit) } : {}),
+        ...(params?.before ? { before: params.before } : {}),
+      },
+    }),
+
+  getUnreadCount: () =>
+    request<{ count: number }>("/notifications/unread-count"),
+
+  markRead: (id: string) =>
+    request<{ success: boolean }>(`/notifications/${id}/read`, { method: "PATCH" }),
+
+  markAllRead: () =>
+    request<{ success: boolean }>("/notifications/read-all", { method: "PATCH" }),
 };

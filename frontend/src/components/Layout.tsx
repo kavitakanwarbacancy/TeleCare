@@ -11,7 +11,6 @@ import {
   FileText,
   User,
   LogOut,
-  Bell,
   Menu,
   X,
   Stethoscope,
@@ -23,6 +22,7 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationBell } from "@/components/NotificationBell";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -157,10 +157,7 @@ export const Layout = ({ children, role }: LayoutProps) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-400 hover:text-brand-500 transition-colors relative">
-              <Bell className="w-6 h-6" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-            </button>
+            <NotificationBell />
             <div className="h-10 w-px bg-slate-200 mx-2" />
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">

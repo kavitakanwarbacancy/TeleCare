@@ -165,6 +165,7 @@ model Appointment {
   durationMinutes  Int               @default(30) @map("duration_minutes")
   status           AppointmentStatus @default(PENDING)
   reason           String?
+  declineReason    String?           @map("decline_reason")
   // Video session
   videoRoomId      String?           @map("video_room_id")
   meetingLink      String?           @map("meeting_link")

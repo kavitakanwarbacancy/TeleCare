@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import {
   Calendar, Clock, Video, MoreVertical,
-  CheckCircle2, XCircle, AlertCircle, Plus, Loader2,
+  AlertCircle, Plus, Loader2,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,28 +22,19 @@ function getTab(status: string): Tab {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const tab = getTab(status);
-  const label = {
-    PENDING: 'Pending', CONFIRMED: 'Confirmed',
-    COMPLETED: 'Completed', NO_SHOW: 'No Show',
-    CANCELLED_BY_PATIENT: 'Cancelled', CANCELLED_BY_DOCTOR: 'Cancelled by Doctor',
-  }[status] ?? status;
-
-  const styles: Record<Tab, string> = {
-    Upcoming: 'text-blue-500',
-    Past: 'text-green-500',
-    Cancelled: 'text-red-500',
+  const configs: Record<string, { label: string; className: string }> = {
+    PENDING: { label: "Awaiting Confirmation", className: "bg-amber-50 text-amber-600 border border-amber-200" },
+    CONFIRMED: { label: "Confirmed", className: "bg-emerald-50 text-emerald-600 border border-emerald-200" },
+    COMPLETED: { label: "Completed", className: "bg-slate-50 text-slate-500 border border-slate-200" },
+    NO_SHOW: { label: "No Show", className: "bg-orange-50 text-orange-600 border border-orange-200" },
+    CANCELLED_BY_PATIENT: { label: "Cancelled", className: "bg-red-50 text-red-500 border border-red-200" },
+    CANCELLED_BY_DOCTOR: { label: "Declined by Doctor", className: "bg-red-50 text-red-500 border border-red-200" },
   };
-  const icons: Record<Tab, React.ReactNode> = {
-    Upcoming: <AlertCircle className="w-4 h-4" />,
-    Past: <CheckCircle2 className="w-4 h-4" />,
-    Cancelled: <XCircle className="w-4 h-4" />,
-  };
-
+  const cfg = configs[status] ?? { label: status, className: "bg-slate-50 text-slate-500 border border-slate-200" };
   return (
-    <div className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider ${styles[tab]}`}>
-      {icons[tab]} {label}
-    </div>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${cfg.className}`}>
+      {cfg.label}
+    </span>
   );
 }
 
@@ -61,68 +52,86 @@ function AppointmentCard({
   const isUpcoming = getTab(appt.status) === 'Upcoming';
 
   return (
-    <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-6 group">
-      <div className="flex items-center gap-5">
+    <div className="bg-white px-8 py-6 rounded-[28px] border border-slate-100 shadow-sm hover:shadow-md transition-all group grid grid-cols-[260px_1fr_auto] items-center gap-8">
+
+      {/* ── Doctor info – fixed 260px ── */}
+      <div className="flex items-center gap-4 min-w-0">
         <img
           src={`https://picsum.photos/seed/${appt.doctor.id}/100/100`}
-          className="w-16 h-16 rounded-2xl object-cover shadow-sm flex-shrink-0"
+          className="w-14 h-14 rounded-2xl object-cover shadow-sm flex-shrink-0"
           alt={appt.doctor.user.name}
           referrerPolicy="no-referrer"
         />
-        <div>
-          <h4 className="text-lg font-bold text-slate-900 group-hover:text-brand-600 transition-colors">
+        <div className="min-w-0">
+          <h4 className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors truncate leading-snug">
             {appt.doctor.user.name}
           </h4>
-          <p className="text-sm font-medium text-slate-500 mb-2">{appt.doctor.specialization}</p>
-          <div className="flex items-center gap-2 text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1 rounded-full w-fit">
-            <Video className="w-3.5 h-3.5" /> Video Consultation
+          <p className="text-xs text-slate-400 truncate mt-0.5 mb-2">{appt.doctor.specialization}</p>
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
+            <Video className="w-3 h-3" /> Video Consultation
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-8 md:gap-12">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+      {/* ── Info columns – always anchored at same x ── */}
+      <div className="flex items-center border-l border-slate-100 pl-8">
+        <div className="w-[130px]">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
             <Calendar className="w-3.5 h-3.5" /> Date
-          </div>
-          <p className="text-sm font-bold text-slate-700">
-            {format(new Date(appt.scheduledAt), 'MMM d, yyyy')}
           </p>
+          <p className="text-sm font-bold text-slate-800">{format(new Date(appt.scheduledAt), 'MMM d, yyyy')}</p>
         </div>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
+
+        <div className="w-[110px]">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
             <Clock className="w-3.5 h-3.5" /> Time
-          </div>
-          <p className="text-sm font-bold text-slate-700">
-            {format(new Date(appt.scheduledAt), 'hh:mm a')}
           </p>
+          <p className="text-sm font-bold text-slate-800">{format(new Date(appt.scheduledAt), 'hh:mm a')}</p>
         </div>
-        <div className="space-y-1">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+
+        <div className="w-[190px]">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Status</p>
           <StatusBadge status={appt.status} />
         </div>
+
+        <div className="flex-1">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            {appt.status === 'CANCELLED_BY_DOCTOR' && appt.declineReason ? "Doctor's Reason" : '\u00A0'}
+          </p>
+          <p className="text-sm text-slate-600 italic leading-snug">
+            {appt.status === 'CANCELLED_BY_DOCTOR' && appt.declineReason
+              ? `"${appt.declineReason}"`
+              : ''}
+          </p>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        {isUpcoming && (
-          <>
-            <Link
-              href={`/patient/consultation/${appt.id}`}
-              className="px-6 py-3 bg-brand-500 text-white font-bold rounded-xl hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 active:scale-95 text-sm"
-            >
-              Join Call
-            </Link>
-            <button
-              onClick={onCancel}
-              disabled={cancelling}
-              className="px-4 py-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all text-sm font-bold disabled:opacity-50"
-            >
-              {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancel'}
-            </button>
-          </>
+      {/* ── Actions ── */}
+      <div className="flex items-center gap-2">
+        {appt.status === 'CONFIRMED' && (
+          <Link
+            href={`/patient/consultation/${appt.id}`}
+            className="px-5 py-2.5 bg-brand-500 text-white font-bold rounded-xl hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 active:scale-95 text-sm flex items-center gap-2"
+          >
+            <Video className="w-4 h-4" /> Join Call
+          </Link>
         )}
-        <button className="p-3 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all">
-          <MoreVertical className="w-5 h-5" />
+        {appt.status === 'PENDING' && (
+          <span className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-600 text-xs font-bold rounded-xl whitespace-nowrap">
+            <AlertCircle className="w-3.5 h-3.5" /> Awaiting confirmation
+          </span>
+        )}
+        {isUpcoming && (
+          <button
+            onClick={onCancel}
+            disabled={cancelling}
+            className="px-4 py-2.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all text-sm font-bold disabled:opacity-50"
+          >
+            {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cancel'}
+          </button>
+        )}
+        <button className="p-2.5 text-slate-300 hover:text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
+          <MoreVertical className="w-4 h-4" />
         </button>
       </div>
     </div>
