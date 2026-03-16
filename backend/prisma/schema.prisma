@@ -75,6 +75,7 @@ model User {
   verificationToken    String?   @map("verification_token")
   passwordResetToken   String?   @map("password_reset_token")
   passwordResetExpires DateTime? @map("password_reset_expires")
+  avatarFileId         String?   @map("avatar_file_id")
   // Audit
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")

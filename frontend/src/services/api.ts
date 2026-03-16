@@ -250,6 +250,96 @@ export interface PatientProfile {
 
 export const patientsApi = {
   getById: (patientId: string) => request<PatientProfile>(`/patients/${patientId}`),
+
+  updateMe: (data: {
+    phone?: string | null;
+    dateOfBirth?: string | null;
+    gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY' | null;
+    bloodGroup?: string | null;
+    height?: number | null;
+    weight?: number | null;
+    emergencyContactName?: string | null;
+    emergencyContactPhone?: string | null;
+    city?: string | null;
+    state?: string | null;
+    address?: string | null;
+  }) =>
+    request<{
+      id: string;
+      userId: string;
+      phone: string | null;
+      dateOfBirth: string | null;
+      gender: string | null;
+      bloodGroup: string | null;
+      height: number | null;
+      weight: number | null;
+      emergencyContactName: string | null;
+      emergencyContactPhone: string | null;
+      city: string | null;
+      state: string | null;
+      address: string | null;
+      user: { id: string; name: string; email: string };
+    }>("/patients/me", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+};
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+export interface UserMe {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatarFileId: string | null;
+  patient?: {
+    id: string;
+    userId: string;
+    phone: string | null;
+    dateOfBirth: string | null;
+    gender: string | null;
+    bloodGroup: string | null;
+    height: number | null;
+    weight: number | null;
+    emergencyContactName: string | null;
+    emergencyContactPhone: string | null;
+    city: string | null;
+    state: string | null;
+    address: string | null;
+  };
+  doctorProfile?: {
+    id: string;
+    userId: string;
+    specialization: string;
+    experienceYears: number | null;
+    bio: string | null;
+    consultationFee: string | null;
+    registrationNumber: string | null;
+    degree: string | null;
+    verified: boolean;
+    isActive: boolean;
+  };
+}
+
+export const usersApi = {
+  getMe: () => request<UserMe>("/users/me"),
+
+  uploadAvatar: async (file: File): Promise<{ avatarFileId: string }> => {
+    const token = getToken();
+    const form = new FormData();
+    form.append("avatar", file);
+    const res = await fetch(`${API_BASE}/users/me/avatar`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error?.message ?? body?.message ?? "Upload failed");
+    }
+    return res.json();
+  },
 };
 
 // ─── Video ────────────────────────────────────────────────────────────────────

@@ -22,7 +22,9 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/NotificationBell";
+import { usersApi, filesApi } from "@/services/api";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -97,11 +99,42 @@ export const Layout = ({ children, role }: LayoutProps) => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
 
   const navItems = role === "patient" ? patientNav : role === "doctor" ? doctorNav : adminNav;
 
   const displayName = user?.name ?? "Loading...";
   const avatarSeed = user?.id ?? "default";
+
+  const { data: me } = useQuery({
+    queryKey: ["users", "me"],
+    queryFn: () => usersApi.getMe(),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const avatarFileId = me?.avatarFileId ?? null;
+
+  React.useEffect(() => {
+    let active = true;
+    if (!avatarFileId) {
+      setAvatarUrl(null);
+      return () => {
+        active = false;
+      };
+    }
+    filesApi
+      .fetchBlob(avatarFileId)
+      .then((url) => {
+        if (active) setAvatarUrl(url);
+      })
+      .catch(() => {
+        if (active) setAvatarUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [avatarFileId]);
 
   React.useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -201,7 +234,7 @@ export const Layout = ({ children, role }: LayoutProps) => {
               </div>
               <div className="relative w-10 h-10">
                 <Image
-                  src={`https://picsum.photos/seed/${avatarSeed}/100/100`}
+                  src={avatarUrl ?? `https://picsum.photos/seed/${avatarSeed}/100/100`}
                   alt="Avatar"
                   fill
                   className="rounded-full border-2 border-white shadow-sm object-cover"
