@@ -3,10 +3,17 @@
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Mail, MapPin, Calendar, Edit, Camera, Stethoscope, Award, Clock, ChevronDown } from "lucide-react";
+import { Mail, MapPin, Calendar, Edit, Camera, Stethoscope, Award, Clock, ChevronDown, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { doctorsApi, type DoctorSummary, type UpdateDoctorProfileInput, type SpecializationOption } from "@/services/api";
+import {
+  doctorsApi,
+  usersApi,
+  filesApi,
+  type DoctorSummary,
+  type UpdateDoctorProfileInput,
+  type SpecializationOption,
+} from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 import { getStates, getCities } from "@/constants/india-locations";
 
@@ -17,6 +24,10 @@ export default function DoctorProfile() {
   const { user, token } = useAuth();
   const router = useRouter();
   const qClient = useQueryClient();
+  const [avatarBlobUrl, setAvatarBlobUrl] = React.useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+  const [avatarError, setAvatarError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const { data: profile, isLoading, isError } = useQuery({
     queryKey: ["doctor", "me"],
@@ -28,6 +39,13 @@ export default function DoctorProfile() {
     queryKey: ["doctor", "specializations"],
     queryFn: () => doctorsApi.getSpecializations(),
     staleTime: 1000 * 60 * 60,
+  });
+
+  const { data: me } = useQuery({
+    queryKey: ["users", "me"],
+    queryFn: () => usersApi.getMe(),
+    enabled: !!token,
+    staleTime: 1000 * 60 * 5,
   });
 
   const [form, setForm] = React.useState<UpdateDoctorProfileInput>({
@@ -44,6 +62,45 @@ export default function DoctorProfile() {
 
   const [selectedStateCode, setSelectedStateCode] = React.useState("");
   const [isEditing, setIsEditing] = React.useState(false);
+
+  const avatarFileId = me?.avatarFileId ?? null;
+
+  React.useEffect(() => {
+    let active = true;
+    if (!avatarFileId) {
+      setAvatarBlobUrl(null);
+      return () => {
+        active = false;
+      };
+    }
+    filesApi
+      .fetchBlob(avatarFileId)
+      .then((url) => {
+        if (active) setAvatarBlobUrl(url);
+      })
+      .catch(() => {
+        if (active) setAvatarBlobUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [avatarFileId]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarError(null);
+    setUploadingAvatar(true);
+    try {
+      await usersApi.uploadAvatar(file);
+      qClient.invalidateQueries({ queryKey: ["users", "me"] });
+    } catch (err: unknown) {
+      setAvatarError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  };
 
   React.useEffect(() => {
     if (profile) {
@@ -197,21 +254,46 @@ export default function DoctorProfile() {
       <div className="grid md:grid-cols-3 gap-10">
         <div className="md:col-span-1 space-y-6">
           <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm text-center relative group">
-            <div className="relative inline-block w-32 h-32">
-              <Image
-                src={`https://picsum.photos/seed/${profile.id}/200/200`}
-                alt={profile.user.name}
-                fill
-                className="rounded-[40px] object-cover border-4 border-white shadow-xl"
-                referrerPolicy="no-referrer"
-              />
-              <button
-                type="button"
-                className="absolute bottom-0 right-0 p-2 bg-brand-500 text-white rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
+            {/* Hidden file input for avatar upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+            <div
+              className="relative inline-block w-32 h-32 cursor-pointer group"
+              onClick={() => !uploadingAvatar && fileInputRef.current?.click()}
+              title="Change profile picture"
+            >
+              {avatarBlobUrl ? (
+                <Image
+                  src={avatarBlobUrl}
+                  alt={profile.user.name}
+                  fill
+                  className="rounded-[40px] object-cover border-4 border-white shadow-xl"
+                />
+              ) : (
+                <Image
+                  src={`https://picsum.photos/seed/${profile.id}/200/200`}
+                  alt={profile.user.name}
+                  fill
+                  className="rounded-[40px] object-cover border-4 border-white shadow-xl"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+              <div className="absolute inset-0 rounded-[40px] bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploadingAvatar ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </div>
             </div>
+            {avatarError && (
+              <p className="text-xs text-red-500 font-semibold mt-2">{avatarError}</p>
+            )}
             <h3 className="text-xl font-bold text-slate-900 mt-6">{profile.user.name}</h3>
             <p className="text-brand-600 font-bold text-sm">{profile.specialization}</p>
             {profile.registrationNumber && (

@@ -20,7 +20,7 @@ export default function ConsultationRoom() {
   const appointmentId = params?.id as string;
 
   const [appointmentInfo, setAppointmentInfo] = useState<VideoInfoResponse | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
@@ -93,8 +93,13 @@ export default function ConsultationRoom() {
               {video.isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </button>
             <button
-              className="lg:hidden p-3 bg-white/10 backdrop-blur-md rounded-2xl text-white hover:bg-white/20 transition-all"
               onClick={() => setIsChatOpen(o => !o)}
+              className={`p-3 backdrop-blur-md rounded-2xl transition-all ${
+                isChatOpen
+                  ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+              title={isChatOpen ? 'Close chat' : 'Open chat'}
             >
               <MessageSquare className="w-5 h-5" />
             </button>
@@ -222,6 +227,17 @@ export default function ConsultationRoom() {
             title="Upload Medical Reports"
           >
             <Paperclip className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setIsChatOpen(o => !o)}
+            title={isChatOpen ? 'Close chat' : 'Open chat'}
+            className={`p-4 rounded-2xl transition-all active:scale-95 ${
+              isChatOpen
+                ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30'
+                : 'bg-white/10 text-white hover:bg-white/20'
+            }`}
+          >
+            <MessageSquare className="w-6 h-6" />
           </button>
           <button
             onClick={video.leaveCall}

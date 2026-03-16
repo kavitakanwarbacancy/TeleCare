@@ -10,9 +10,17 @@ export const appointmentIdParamSchema = z.object({
 /** Allowed status values when doctor confirms or declines */
 const doctorStatusSchema = z.enum(["CONFIRMED", "CANCELLED_BY_DOCTOR"]);
 
-export const updateStatusSchema = z.object({
-  status: doctorStatusSchema,
-});
+export const updateStatusSchema = z
+  .object({
+    status: doctorStatusSchema,
+    declineReason: z.string().max(500).optional(),
+  })
+  .refine(
+    (data) =>
+      data.status !== "CANCELLED_BY_DOCTOR" ||
+      (data.declineReason && data.declineReason.trim().length > 0),
+    { message: "A reason is required when declining an appointment", path: ["declineReason"] }
+  );
 
 export type UpdateStatusBody = z.infer<typeof updateStatusSchema>;
 

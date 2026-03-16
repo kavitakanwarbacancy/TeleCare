@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { config } from "../../config";
-import { buildPasswordResetEmail } from "./email.templates";
+import { buildPasswordResetEmail, buildAppointmentDeclinedEmail } from "./email.templates";
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -51,5 +51,21 @@ export async function sendPasswordReset(to: string, resetLink: string): Promise<
   await sendEmail(to, subject, text, html);
 }
 
+/**
+ * Notify patient that their appointment was declined, with doctor's reason.
+ */
+export async function sendAppointmentDeclined(
+  to: string,
+  patientName: string,
+  doctorName: string,
+  scheduledAt: Date,
+  declineReason: string
+): Promise<void> {
+  const { subject, text, html } = buildAppointmentDeclinedEmail({
+    to, patientName, doctorName, scheduledAt, declineReason,
+  });
+  await sendEmail(to, subject, text, html);
+}
+
 /* Future: sendSignupVerification, sendAppointmentConfirmation, sendAppointmentReminder,
-   sendVideoCallLink, sendAppointmentCancelled, sendAppointmentRescheduled */
+   sendVideoCallLink, sendAppointmentRescheduled */

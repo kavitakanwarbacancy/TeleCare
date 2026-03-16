@@ -36,6 +36,14 @@ const patientProfileSelect = {
   address: true,
 } as const;
 
+export async function updateAvatar(userId: string, avatarFileId: string) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { avatarFileId },
+    select: { id: true, avatarFileId: true },
+  });
+}
+
 export async function getMe(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -44,6 +52,7 @@ export async function getMe(userId: string) {
       name: true,
       email: true,
       role: true,
+      avatarFileId: true,
       doctorProfile: {
         select: doctorProfileSelect,
       },

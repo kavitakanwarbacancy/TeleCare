@@ -15,6 +15,7 @@ const appointmentSelect = {
   durationMinutes: true,
   status: true,
   reason: true,
+  declineReason: true,
   videoRoomId: true,
   meetingLink: true,
   sessionStartedAt: true,
@@ -59,8 +60,12 @@ export type UpdateStatusResult = {
   scheduledAt: Date;
   status: string;
   reason: string | null;
+  declineReason: string | null;
   createdAt: Date;
   patientUserId: string;
+  patientEmail: string;
+  patientName: string;
+  doctorName: string;
 };
 
 /**
@@ -71,7 +76,8 @@ export async function updateStatus(
   appointmentId: string,
   userId: string,
   role: string,
-  status: "CONFIRMED" | "CANCELLED_BY_DOCTOR"
+  status: "CONFIRMED" | "CANCELLED_BY_DOCTOR",
+  declineReason?: string
 ): Promise<UpdateStatusResult> {
   if (role !== "DOCTOR") {
     serviceError("Only doctors can confirm or decline appointments", 403, "FORBIDDEN");
@@ -85,7 +91,8 @@ export async function updateStatus(
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
     include: {
-      patient: { select: { userId: true } },
+      patient: { include: { user: { select: { id: true, name: true, email: true } } } },
+      doctor: { include: { user: { select: { name: true } } } },
     },
   });
 
@@ -98,8 +105,14 @@ export async function updateStatus(
 
   const updated = await prisma.appointment.update({
     where: { id: appointmentId },
-    data: { status },
-    include: { patient: { select: { userId: true } } },
+    data: {
+      status,
+      ...(status === "CANCELLED_BY_DOCTOR" ? { declineReason: declineReason ?? null } : {}),
+    },
+    include: {
+      patient: { include: { user: { select: { id: true, name: true, email: true } } } },
+      doctor: { include: { user: { select: { name: true } } } },
+    },
   });
 
   return {
@@ -109,8 +122,12 @@ export async function updateStatus(
     scheduledAt: updated.scheduledAt,
     status: updated.status,
     reason: updated.reason,
+    declineReason: updated.declineReason,
     createdAt: updated.createdAt,
     patientUserId: updated.patient.userId,
+    patientEmail: updated.patient.user.email,
+    patientName: updated.patient.user.name,
+    doctorName: updated.doctor.user.name,
   };
 }
 
