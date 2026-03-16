@@ -113,7 +113,7 @@ export default function SignupPage() {
       <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-24 bg-white relative overflow-hidden">
         <Link
           href="/"
-          className="absolute top-8 left-8 flex items-center gap-2 text-slate-500 hover:text-brand-500 transition-colors font-semibold group"
+          className="inline-flex items-center gap-2 text-slate-500 hover:text-brand-500 transition-colors font-semibold group mb-6 sm:mb-8 lg:mb-0 lg:absolute lg:top-8 lg:left-8"
         >
           <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           Back to Home

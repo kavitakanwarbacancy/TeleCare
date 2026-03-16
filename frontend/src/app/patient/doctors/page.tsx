@@ -16,14 +16,14 @@ const SELECT_CLASS =
 
 function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
   return (
-    <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-      <div className="flex items-start gap-6 mb-6">
+    <div className="w-full max-w-full bg-white p-4 sm:p-6 rounded-3xl sm:rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
+      <div className="flex items-start gap-4 sm:gap-6 mb-6">
         <div className="relative w-20 h-20 flex-shrink-0">
           <Image
             src={`https://picsum.photos/seed/${doctor.id}/100/100`}
             alt={doctor.user.name}
             fill
-            className="rounded-3xl object-cover border-4 border-white shadow-md"
+            className="max-w-full h-auto rounded-3xl object-cover border-4 border-white shadow-md"
             referrerPolicy="no-referrer"
           />
           <div className="absolute -bottom-2 -right-2 bg-green-500 w-5 h-5 rounded-full border-4 border-white shadow-sm z-10" />
@@ -53,7 +53,7 @@ function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-6 border-t border-slate-50">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t border-slate-50">
         <div>
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Consultation Fee</p>
           <p className="text-xl font-bold text-slate-900">
@@ -62,7 +62,7 @@ function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
         </div>
         <Link
           href={`/patient/doctors/${doctor.id}`}
-          className="px-6 py-3 bg-brand-500 text-white text-sm font-bold rounded-2xl hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 active:scale-95 flex items-center gap-2"
+          className="w-full sm:w-auto px-6 py-3 bg-brand-500 text-white text-sm font-bold rounded-2xl hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 active:scale-95 flex items-center justify-center gap-2"
         >
           View Profile <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </Link>
@@ -127,16 +127,16 @@ export default function DoctorDiscovery() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="space-y-10"
+      className="w-full max-w-full overflow-x-hidden space-y-8 sm:space-y-10"
     >
       {/* Search & Filter */}
-      <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+      <div className="w-full max-w-full bg-white p-4 sm:p-6 lg:p-8 rounded-3xl sm:rounded-[40px] border border-slate-100 shadow-sm space-y-6 overflow-x-hidden">
         <div className="flex-1 w-full relative group">
           <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
           <input
             type="text"
             placeholder="Search by doctor name or specialization..."
-            className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[24px] focus:bg-white focus:border-brand-500 outline-none transition-all font-medium text-lg"
+            className="w-full max-w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-4 sm:py-5 bg-slate-50 border-2 border-transparent rounded-2xl sm:rounded-[24px] focus:bg-white focus:border-brand-500 outline-none transition-all font-medium text-base sm:text-lg"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -189,12 +189,12 @@ export default function DoctorDiscovery() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pb-1">
           {SPECIALTIES.map((s) => (
             <button
               key={s}
               onClick={() => setSelectedSpecialty(s)}
-              className={`px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+              className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-sm font-bold whitespace-normal break-words text-left transition-all ${
                 selectedSpecialty === s
                   ? "bg-brand-500 text-white shadow-lg shadow-brand-100"
                   : "bg-slate-50 text-slate-500 hover:bg-slate-100"
@@ -219,13 +219,13 @@ export default function DoctorDiscovery() {
         )}
 
         {isError && (
-          <div className="p-12 bg-red-50 rounded-[40px] text-center">
+          <div className="p-6 sm:p-12 bg-red-50 rounded-3xl sm:rounded-[40px] text-center">
             <p className="text-red-500 font-bold">Failed to load doctors. Please try again.</p>
           </div>
         )}
 
         {!isLoading && !isError && filtered.length === 0 && (
-          <div className="p-20 bg-white rounded-[40px] border border-dashed border-slate-200 text-center">
+          <div className="p-8 sm:p-20 bg-white rounded-3xl sm:rounded-[40px] border border-dashed border-slate-200 text-center">
             <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <h4 className="text-xl font-bold text-slate-900 mb-2">No doctors found</h4>
             <p className="text-slate-500 max-w-xs mx-auto">Try adjusting your search or filters.</p>
@@ -233,7 +233,7 @@ export default function DoctorDiscovery() {
         )}
 
         {!isLoading && !isError && filtered.length > 0 && (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 xl:gap-8 w-full max-w-full">
             {filtered.map((doctor) => (
               <DoctorCard key={doctor.id} doctor={doctor} />
             ))}
