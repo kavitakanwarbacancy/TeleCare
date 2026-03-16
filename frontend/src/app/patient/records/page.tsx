@@ -246,8 +246,8 @@ export default function MedicalRecords() {
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["prescriptions", "mine"],
-    queryFn: () => prescriptionsApi.getMine(),
+    queryKey: ["prescriptions", "mine", 50],
+    queryFn: () => prescriptionsApi.getMine({ limit: 50 }),
     enabled: !!token,
   });
 

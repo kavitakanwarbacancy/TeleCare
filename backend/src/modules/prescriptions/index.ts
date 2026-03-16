@@ -6,6 +6,7 @@ import {
   prescriptionIdParamSchema,
   appointmentIdParamSchema,
   createPrescriptionSchema,
+  listMyPrescriptionsQuerySchema,
 } from "./prescriptions.schemas";
 
 const router = Router();
@@ -77,9 +78,12 @@ router.get(
   requireAuth,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const queryParsed = listMyPrescriptionsQuerySchema.safeParse(req.query);
+      if (!queryParsed.success) { next(toValidationError(queryParsed.error)); return; }
+
       const { user } = req as AuthenticatedRequest;
       if (!user) { next(new Error("Authentication required")); return; }
-      const result = await prescriptionsService.listForUser(user.sub, user.role);
+      const result = await prescriptionsService.listForUser(user.sub, user.role, queryParsed.data);
       res.json(result);
     } catch (e) {
       next(e);

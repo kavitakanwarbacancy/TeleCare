@@ -56,6 +56,11 @@ export interface ListDoctorsResult {
   limit: number;
 }
 
+export interface GetAvailabilityOptions {
+  from?: string;
+  to?: string;
+}
+
 export async function listDoctors(params: ListDoctorsParams): Promise<ListDoctorsResult> {
   const { specialization, city, state, verified, page, limit } = params;
 
@@ -108,7 +113,7 @@ export async function getDoctorById(id: string) {
   return doctor;
 }
 
-export async function getAvailability(doctorId: string) {
+export async function getAvailability(doctorId: string, options: GetAvailabilityOptions = {}) {
   const doctor = await prisma.doctorProfile.findUnique({
     where: { id: doctorId },
     select: { id: true },
@@ -129,7 +134,28 @@ export async function getAvailability(doctorId: string) {
     },
   });
 
-  return { availability };
+  const bookedAppointments =
+    options.from && options.to
+      ? (
+          await prisma.appointment.findMany({
+            where: {
+              doctorId,
+              status: { in: ["PENDING", "CONFIRMED"] },
+              scheduledAt: {
+                gte: new Date(options.from),
+                lt: new Date(options.to),
+              },
+            },
+            orderBy: { scheduledAt: "asc" },
+            select: { scheduledAt: true, durationMinutes: true },
+          })
+        ).map((appointment) => ({
+          scheduledAt: appointment.scheduledAt.toISOString(),
+          durationMinutes: appointment.durationMinutes,
+        }))
+      : [];
+
+  return { availability, bookedAppointments };
 }
 
 export async function getMyAvailability(userId: string) {
