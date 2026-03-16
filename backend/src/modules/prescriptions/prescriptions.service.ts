@@ -189,7 +189,15 @@ export async function getById(prescriptionId: string, userId: string, role: stri
   return prescription;
 }
 
-export async function listForUser(userId: string, role: string) {
+export interface ListPrescriptionsForUserOptions {
+  limit: number;
+}
+
+export async function listForUser(
+  userId: string,
+  role: string,
+  options: ListPrescriptionsForUserOptions,
+) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -210,6 +218,7 @@ export async function listForUser(userId: string, role: string) {
   const prescriptions = await prisma.prescription.findMany({
     where,
     orderBy: { createdAt: "desc" },
+    take: options.limit,
     select: {
       id: true,
       doctorId: true,

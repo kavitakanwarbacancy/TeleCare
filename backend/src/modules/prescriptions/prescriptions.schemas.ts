@@ -23,3 +23,7 @@ export const createPrescriptionSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   items: z.array(prescriptionItemSchema).min(1, "At least one prescription item is required"),
 });
+
+export const listMyPrescriptionsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(50),
+});

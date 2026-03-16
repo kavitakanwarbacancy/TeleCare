@@ -20,6 +20,11 @@ export const doctorIdParamSchema = z.object({
   id: uuidSchema,
 });
 
+export const availabilityQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+});
+
 export const updateDoctorProfileSchema = z.object({
   specialization: z
     .string()

@@ -15,9 +15,12 @@ import { doctorsApi, appointmentsApi, type AvailabilitySlot } from '@/services/a
 // ─── Slot helpers ─────────────────────────────────────────────────────────────
 
 /** Generate time slot strings ("09:00 AM") for a given date from weekly availability. */
-function buildSlots(availability: AvailabilitySlot[], date: Date): string[] {
+function buildSlots(
+  availability: AvailabilitySlot[],
+  date: Date,
+): Array<{ label: string; startsAt: string; durationMinutes: number }> {
   const weekday = date.getDay(); // 0 = Sun
-  const slots: string[] = [];
+  const slots: Array<{ label: string; startsAt: string; durationMinutes: number }> = [];
 
   for (const a of availability.filter((x) => x.weekday === weekday)) {
     const [sh, sm] = a.startTime.split(':').map(Number);
@@ -28,7 +31,11 @@ function buildSlots(availability: AvailabilitySlot[], date: Date): string[] {
     const end = setMinutes(setHours(startOfDay(date), eh), em);
 
     while (cursor < end) {
-      slots.push(format(cursor, 'hh:mm a'));
+      slots.push({
+        label: format(cursor, 'hh:mm a'),
+        startsAt: cursor.toISOString(),
+        durationMinutes: step,
+      });
       cursor = new Date(cursor.getTime() + step * 60_000);
     }
   }
@@ -54,6 +61,13 @@ export default function DoctorProfilePage() {
 
   const today = startOfDay(new Date());
   const next7Days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  const availabilityRange = React.useMemo(
+    () => ({
+      from: today.toISOString(),
+      to: addDays(today, 7).toISOString(),
+    }),
+    [today],
+  );
 
   const [selectedDate, setSelectedDate] = React.useState<Date>(today);
   const [selectedSlot, setSelectedSlot] = React.useState<string | null>(null);
@@ -67,12 +81,16 @@ export default function DoctorProfilePage() {
   });
 
   const { data: availData, isLoading: loadingSlots } = useQuery({
-    queryKey: ['doctor-availability', id],
-    queryFn: () => doctorsApi.getAvailability(id),
+    queryKey: ['doctor-availability', id, availabilityRange.from, availabilityRange.to],
+    queryFn: () => doctorsApi.getAvailability(id, availabilityRange),
     enabled: !!id,
   });
 
   const slots = availData ? buildSlots(availData.availability, selectedDate) : [];
+  const bookedAppointments = React.useMemo(
+    () => availData?.bookedAppointments ?? [],
+    [availData?.bookedAppointments],
+  );
 
   // Reset slot on date change.
   React.useEffect(() => { setSelectedSlot(null); }, [selectedDate]);
@@ -231,19 +249,45 @@ export default function DoctorProfilePage() {
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-1">
-                  {slots.map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedSlot(slot)}
-                      className={`py-3 rounded-2xl text-sm font-bold transition-all border-2 ${
-                        selectedSlot === slot
-                          ? 'bg-brand-50 border-brand-500 text-brand-600'
-                          : 'bg-white border-slate-100 text-slate-500 hover:border-brand-200'
-                      }`}
-                    >
-                      {slot}
-                    </button>
-                  ))}
+                  {slots.map((slot) => {
+                    const slotStart = new Date(slot.startsAt).getTime();
+                    const slotEnd = slotStart + slot.durationMinutes * 60_000;
+                    const isBooked = bookedAppointments.some((appointment) => {
+                      const appointmentStart = new Date(appointment.scheduledAt).getTime();
+                      const appointmentEnd = appointmentStart + appointment.durationMinutes * 60_000;
+                      return slotStart < appointmentEnd && slotEnd > appointmentStart;
+                    });
+
+                    return (
+                      <button
+                        key={slot.startsAt}
+                        onClick={() => {
+                          if (!isBooked) {
+                            setSelectedSlot(slot.label);
+                          }
+                        }}
+                        disabled={isBooked}
+                        className={`min-h-16 rounded-2xl text-sm font-bold transition-all border-2 px-3 ${
+                          isBooked
+                            ? 'bg-slate-100/90 border-slate-200 text-slate-400 cursor-not-allowed'
+                            : selectedSlot === slot.label
+                              ? 'bg-brand-50 border-brand-500 text-brand-600'
+                              : 'bg-white border-slate-100 text-slate-500 hover:border-brand-200'
+                        }`}
+                      >
+                        {isBooked ? (
+                          <div className="flex h-full flex-col items-center justify-center gap-1.5">
+                            <span className="blur-[1px] opacity-70">{slot.label}</span>
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                              Already booked
+                            </span>
+                          </div>
+                        ) : (
+                          slot.label
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>

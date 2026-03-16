@@ -104,6 +104,14 @@ export interface AvailabilitySlot {
   slotDuration: number; // minutes
 }
 
+export interface DoctorAvailabilityResponse {
+  availability: AvailabilitySlot[];
+  bookedAppointments: Array<{
+    scheduledAt: string;
+    durationMinutes: number;
+  }>;
+}
+
 export type UpdateDoctorProfileInput = {
   specialization?: string;
   experienceYears?: number;
@@ -148,8 +156,13 @@ export const doctorsApi = {
 
   getById: (id: string) => request<DoctorSummary>(`/doctors/${id}`),
 
-  getAvailability: (id: string) =>
-    request<{ availability: AvailabilitySlot[] }>(`/doctors/${id}/availability`),
+  getAvailability: (id: string, params?: { from?: string; to?: string }) =>
+    request<DoctorAvailabilityResponse>(`/doctors/${id}/availability`, {
+      params: {
+        ...(params?.from ? { from: params.from } : {}),
+        ...(params?.to ? { to: params.to } : {}),
+      },
+    }),
 
   getMe: () => request<DoctorSummary>("/doctors/me"),
 
@@ -160,7 +173,7 @@ export const doctorsApi = {
     }),
 
   getMyAvailability: () =>
-    request<{ availability: AvailabilitySlot[] }>("/doctors/me/availability"),
+    request<DoctorAvailabilityResponse>("/doctors/me/availability"),
 
   updateMyAvailability: (slots: AvailabilitySlotInput[]) =>
     request<{ availability: AvailabilitySlot[] }>("/doctors/me/availability", {
@@ -519,8 +532,12 @@ export const prescriptionsApi = {
   getByAppointment: (appointmentId: string) =>
     request<{ prescriptions: Prescription[] }>(`/prescriptions/appointment/${appointmentId}`),
 
-  getMine: () =>
-    request<{ prescriptions: Prescription[] }>("/prescriptions/mine"),
+  getMine: (params?: { limit?: number }) =>
+    request<{ prescriptions: Prescription[] }>("/prescriptions/mine", {
+      params: {
+        ...(params?.limit ? { limit: String(params.limit) } : {}),
+      },
+    }),
 };
 
 // ─── Notifications ─────────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import {
 import { toValidationError } from "../../utils/validation";
 import * as doctorsService from "./doctors.service";
 import {
+  availabilityQuerySchema,
   doctorIdParamSchema,
   listDoctorsQuerySchema,
   updateDoctorProfileSchema,
@@ -155,12 +156,19 @@ router.get(
   "/:id/availability",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const parsed = doctorIdParamSchema.safeParse(req.params);
-      if (!parsed.success) {
-        next(toValidationError(parsed.error));
+      const paramParsed = doctorIdParamSchema.safeParse(req.params);
+      if (!paramParsed.success) {
+        next(toValidationError(paramParsed.error));
         return;
       }
-      const result = await doctorsService.getAvailability(parsed.data.id);
+
+      const queryParsed = availabilityQuerySchema.safeParse(req.query);
+      if (!queryParsed.success) {
+        next(toValidationError(queryParsed.error));
+        return;
+      }
+
+      const result = await doctorsService.getAvailability(paramParsed.data.id, queryParsed.data);
       res.json(result);
     } catch (e) {
       next(e);
