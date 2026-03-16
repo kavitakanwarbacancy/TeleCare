@@ -67,13 +67,19 @@ function SidebarItem({
   active,
   onClick,
 }: NavItem & { active: boolean; onClick?: () => void }) {
+  const [pending, setPending] = React.useState(false);
+
+  React.useEffect(() => { setPending(false); }, [active]);
+
+  const isHighlighted = active || pending;
+
   return (
     <Link
       href={to}
-      onClick={onClick}
+      onClick={() => { setPending(true); onClick?.(); }}
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
-        active
+        isHighlighted
           ? "bg-brand-500 text-white shadow-md shadow-brand-200"
           : "text-slate-600 hover:bg-brand-50 hover:text-brand-600",
       )}
@@ -81,7 +87,7 @@ function SidebarItem({
       <Icon
         className={cn(
           "w-5 h-5",
-          active ? "text-white" : "text-slate-400 group-hover:text-brand-500",
+          isHighlighted ? "text-white" : "text-slate-400 group-hover:text-brand-500",
         )}
       />
       <span className="font-medium">{label}</span>
