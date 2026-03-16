@@ -14,7 +14,6 @@ import { useQuery } from "@tanstack/react-query";
 import { appointmentsApi, type Appointment } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 import { getStates, getCities } from "@/constants/india-locations";
-import { SPECIALTIES } from "@/constants/specialties";
 
 const SELECT_CLASS =
   "w-full appearance-none pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm disabled:opacity-60 disabled:cursor-not-allowed";
@@ -90,7 +89,7 @@ function FindDoctorsSection() {
   const router = useRouter();
   const [stateCode, setStateCode] = React.useState("");
   const [city, setCity] = React.useState("");
-  const [specialty, setSpecialty] = React.useState("All");
+  const [specialty, setSpecialty] = React.useState("");
 
   const states = React.useMemo(() => getStates(), []);
   const cities = React.useMemo(
@@ -104,7 +103,7 @@ function FindDoctorsSection() {
     const params = new URLSearchParams();
     if (stateCode) params.set("stateCode", stateCode);
     if (city) params.set("city", city);
-    if (specialty && specialty !== "All") params.set("specialty", specialty);
+    if (specialty) params.set("specialty", specialty);
     router.push(`/patient/doctors${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
@@ -156,17 +155,14 @@ function FindDoctorsSection() {
               <Stethoscope className="w-3.5 h-3.5 inline mr-1" /> Specialty
             </label>
             <div className="relative">
-              <select
+              <input
                 id="dashboard-specialty"
+                type="text"
                 value={specialty}
                 onChange={(e) => setSpecialty(e.target.value)}
-                className={SELECT_CLASS}
-              >
-                {SPECIALTIES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                placeholder="e.g. cardiologist, dermatologist"
+                className="w-full pl-4 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm"
+              />
             </div>
           </div>
         </div>

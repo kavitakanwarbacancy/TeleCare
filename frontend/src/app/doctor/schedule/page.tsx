@@ -61,7 +61,7 @@ export default function DoctorSchedule() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["appointments", user?.id, "all"],
-    queryFn: () => appointmentsApi.list({ limit: 200 }),
+    queryFn: () => appointmentsApi.list({ limit: 100 }),
     enabled: !!token,
   });
 

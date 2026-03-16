@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { config } from "../../config";
 
 const uuidSchema = z.string().uuid("Invalid doctor ID format");
 
@@ -13,7 +14,12 @@ export const listDoctorsQuerySchema = z.object({
       v === "true" ? true : v === "false" ? false : undefined,
     ),
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(config.pagination.maxLimit)
+    .default(config.pagination.defaultLimit),
 });
 
 export const doctorIdParamSchema = z.object({

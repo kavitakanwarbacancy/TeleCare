@@ -79,13 +79,16 @@ async function main() {
 
   // ─── DOCTORS ───────────────────────────────────────────────────────────────
 
+  const CITY_LIST = ["Delhi", "Mumbai", "Bangalore", "Hyderabad", "Pune", "Jaipur", "Ahmedabad", "Lucknow"] as const;
+
+  // DoctorProfile.specialization stores Specialization.id values (e.g. "cardiologist")
   const doctorSeeds = [
     {
       name: "Dr. Sarah Johnson",
       email: "sarah.johnson@telecare.dev",
-      specialization: "General Medicine",
+      specialization: "general_physician",
       experienceYears: 8,
-      bio: "Experienced general practitioner focused on preventive care and chronic disease management. Committed to patient education and holistic wellness.",
+      bio: "General physician focused on preventive care and chronic disease management. Committed to patient education and holistic wellness.",
       consultationFee: 50,
       city: "Bangalore",
       state: "Karnataka",
@@ -94,7 +97,7 @@ async function main() {
     {
       name: "Dr. Michael Chen",
       email: "michael.chen@telecare.dev",
-      specialization: "Cardiology",
+      specialization: "cardiologist",
       experienceYears: 15,
       bio: "Board-certified cardiologist specialising in heart failure, arrhythmia, and preventive cardiology. Published researcher with 40+ peer-reviewed papers.",
       consultationFee: 150,
@@ -105,7 +108,7 @@ async function main() {
     {
       name: "Dr. Priya Patel",
       email: "priya.patel@telecare.dev",
-      specialization: "Dermatology",
+      specialization: "dermatologist",
       experienceYears: 6,
       bio: "Dermatologist specialising in acne, eczema, psoriasis, and cosmetic procedures. Passionate about skin health for all skin types.",
       consultationFee: 100,
@@ -116,7 +119,7 @@ async function main() {
     {
       name: "Dr. James Wilson",
       email: "james.wilson@telecare.dev",
-      specialization: "Pediatrics",
+      specialization: "pediatrician",
       experienceYears: 10,
       bio: "Paediatrician providing compassionate care for newborns through adolescents. Special interest in developmental milestones and childhood nutrition.",
       consultationFee: 75,
@@ -127,13 +130,312 @@ async function main() {
     {
       name: "Dr. Emily Rodriguez",
       email: "emily.rodriguez@telecare.dev",
-      specialization: "Neurology",
+      specialization: "neurologist",
       experienceYears: 12,
       bio: "Neurologist with expertise in migraines, epilepsy, and multiple sclerosis. Uses evidence-based approaches and telemedicine-friendly treatment plans.",
       consultationFee: 200,
-      city: "Chennai",
-      state: "Tamil Nadu",
+      city: "Hyderabad",
+      state: "Telangana",
       availability: availability("14:00", "19:00", [1, 2, 3]), // Mon/Tue/Wed
+    },
+    // Additional doctors to reach ~30–40 total with varied specializations
+    {
+      name: "Dr. Ananya Rao",
+      email: "ananya.rao@telecare.dev",
+      specialization: "general_physician",
+      experienceYears: 9,
+      bio: "General physician with a focus on lifestyle medicine and chronic disease reversal.",
+      consultationFee: 60,
+      city: "Delhi",
+      state: "Delhi",
+      availability: availability("10:00", "18:00", [1, 2, 3, 4, 6]),
+    },
+    {
+      name: "Dr. Arjun Mehta",
+      email: "arjun.mehta@telecare.dev",
+      specialization: "psychiatrist",
+      experienceYears: 11,
+      bio: "Psychiatrist specialising in mood disorders, anxiety, and telepsychiatry-based follow-up care.",
+      consultationFee: 140,
+      city: "Mumbai",
+      state: "Maharashtra",
+      availability: availability("15:00", "21:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Kavya Nair",
+      email: "kavya.nair@telecare.dev",
+      specialization: "gynecologist_obstetrician",
+      experienceYears: 13,
+      bio: "OB-GYN with experience in high-risk pregnancies and adolescent gynecology.",
+      consultationFee: 130,
+      city: "Pune",
+      state: "Maharashtra",
+      availability: availability("09:00", "14:00", [1, 2, 4, 6]),
+    },
+    {
+      name: "Dr. Rohan Singh",
+      email: "rohan.singh@telecare.dev",
+      specialization: "orthopedic_doctor",
+      experienceYears: 10,
+      bio: "Orthopedic specialist treating sports injuries, joint pain, and post-surgical rehabilitation.",
+      consultationFee: 120,
+      city: "Bangalore",
+      state: "Karnataka",
+      availability: availability("16:00", "21:00", [2, 3, 5]),
+    },
+    {
+      name: "Dr. Meera Kapoor",
+      email: "meera.kapoor@telecare.dev",
+      specialization: "endocrinologist",
+      experienceYears: 14,
+      bio: "Endocrinologist managing diabetes, thyroid disorders, and metabolic syndromes.",
+      consultationFee: 160,
+      city: "Jaipur",
+      state: "Rajasthan",
+      availability: availability("09:00", "13:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Sameer Ali",
+      email: "sameer.ali@telecare.dev",
+      specialization: "pulmonologist",
+      experienceYears: 8,
+      bio: "Pulmonologist focusing on asthma, COPD, and post-COVID lung recovery.",
+      consultationFee: 140,
+      city: "Delhi",
+      state: "Delhi",
+      availability: availability("11:00", "17:00", [2, 3, 4]),
+    },
+    {
+      name: "Dr. Neha Verma",
+      email: "neha.verma@telecare.dev",
+      specialization: "dermatologist",
+      experienceYears: 7,
+      bio: "Dermatologist with special interest in acne, pigmentation, and hair disorders.",
+      consultationFee: 110,
+      city: "Lucknow",
+      state: "Uttar Pradesh",
+      availability: availability("10:00", "16:00", [1, 3, 6]),
+    },
+    {
+      name: "Dr. Vikram Desai",
+      email: "vikram.desai@telecare.dev",
+      specialization: "diabetologist",
+      experienceYears: 9,
+      bio: "Diabetologist helping patients achieve tight glycemic control with practical plans.",
+      consultationFee: 100,
+      city: "Ahmedabad",
+      state: "Gujarat",
+      availability: availability("08:00", "12:00", [1, 2, 3, 4, 5]),
+    },
+    {
+      name: "Dr. Sanya Bose",
+      email: "sanya.bose@telecare.dev",
+      specialization: "psychologist",
+      experienceYears: 6,
+      bio: "Clinical psychologist providing CBT and mindfulness-based therapies.",
+      consultationFee: 90,
+      city: "Hyderabad",
+      state: "Telangana",
+      availability: availability("13:00", "19:00", [2, 4, 6]),
+    },
+    {
+      name: "Dr. Rahul Chaturvedi",
+      email: "rahul.chaturvedi@telecare.dev",
+      specialization: "gastroenterologist",
+      experienceYears: 12,
+      bio: "Gastroenterologist experienced in functional bowel disorders and liver disease.",
+      consultationFee: 170,
+      city: "Mumbai",
+      state: "Maharashtra",
+      availability: availability("09:00", "15:00", [1, 2, 4]),
+    },
+    {
+      name: "Dr. Tanya Gill",
+      email: "tanya.gill@telecare.dev",
+      specialization: "fertility_specialist",
+      experienceYears: 10,
+      bio: "Fertility specialist with experience in IUI, IVF, and fertility counseling.",
+      consultationFee: 200,
+      city: "Pune",
+      state: "Maharashtra",
+      availability: availability("10:00", "14:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Nitin Kulkarni",
+      email: "nitin.kulkarni@telecare.dev",
+      specialization: "sports_medicine_specialist",
+      experienceYears: 7,
+      bio: "Sports medicine specialist managing athletic injuries and return-to-sport programs.",
+      consultationFee: 130,
+      city: "Bangalore",
+      state: "Karnataka",
+      availability: availability("17:00", "21:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Aditi Sharma",
+      email: "aditi.sharma@telecare.dev",
+      specialization: "psychiatrist",
+      experienceYears: 8,
+      bio: "Psychiatrist with interest in perinatal mental health and anxiety disorders.",
+      consultationFee: 150,
+      city: "Jaipur",
+      state: "Rajasthan",
+      availability: availability("11:00", "18:00", [2, 3, 5]),
+    },
+    {
+      name: "Dr. Karan Malhotra",
+      email: "karan.malhotra@telecare.dev",
+      specialization: "cardiologist",
+      experienceYears: 10,
+      bio: "Interventional cardiologist focusing on preventive cardiology and post-PCI follow-up.",
+      consultationFee: 180,
+      city: "Delhi",
+      state: "Delhi",
+      availability: availability("09:00", "13:00", [1, 2, 3]),
+    },
+    {
+      name: "Dr. Pooja Iyer",
+      email: "pooja.iyer@telecare.dev",
+      specialization: "pediatrician",
+      experienceYears: 5,
+      bio: "Pediatrician focusing on childhood nutrition, growth monitoring, and vaccination follow-ups.",
+      consultationFee: 80,
+      city: "Hyderabad",
+      state: "Telangana",
+      availability: availability("09:00", "13:00", [2, 4, 6]),
+    },
+    {
+      name: "Dr. Imran Qureshi",
+      email: "imran.qureshi@telecare.dev",
+      specialization: "pulmonologist",
+      experienceYears: 9,
+      bio: "Pulmonologist managing chronic respiratory illness and sleep apnea.",
+      consultationFee: 150,
+      city: "Lucknow",
+      state: "Uttar Pradesh",
+      availability: availability("10:00", "16:00", [1, 3, 5]),
+    },
+    // Low-activity / edge-case doctors
+    {
+      name: "Dr. Shruti Menon",
+      email: "shruti.menon@telecare.dev",
+      specialization: "ayurveda",
+      experienceYears: 6,
+      bio: "Ayurveda practitioner specialising in lifestyle-based interventions and chronic pain.",
+      consultationFee: 70,
+      city: "Ahmedabad",
+      state: "Gujarat",
+      availability: availability("10:00", "16:00", [1, 3, 6]),
+    },
+    {
+      name: "Dr. Manish Gupta",
+      email: "manish.gupta@telecare.dev",
+      specialization: "homeopathy",
+      experienceYears: 15,
+      bio: "Homeopathy practitioner with interest in allergy and respiratory conditions.",
+      consultationFee: 60,
+      city: "Jaipur",
+      state: "Rajasthan",
+      availability: availability("11:00", "17:00", [2, 4, 6]),
+    },
+    {
+      name: "Dr. Leena Das",
+      email: "leena.das@telecare.dev",
+      specialization: "dentist",
+      experienceYears: 4,
+      bio: "Dentist focused on preventive dentistry, restorations, and tele-dentistry triage.",
+      consultationFee: 90,
+      city: "Pune",
+      state: "Maharashtra",
+      availability: availability("10:00", "15:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Arpita Banerjee",
+      email: "arpita.banerjee@telecare.dev",
+      specialization: "ophthalmologist",
+      experienceYears: 8,
+      bio: "Ophthalmologist treating refractive errors, cataracts (offline), and digital eye strain.",
+      consultationFee: 120,
+      city: "Delhi",
+      state: "Delhi",
+      availability: availability("12:00", "18:00", [2, 4, 6]),
+    },
+    {
+      name: "Dr. Suresh Reddy",
+      email: "suresh.reddy@telecare.dev",
+      specialization: "urologist",
+      experienceYears: 10,
+      bio: "Urologist dealing with kidney stones, prostate issues, and urinary infections.",
+      consultationFee: 170,
+      city: "Hyderabad",
+      state: "Telangana",
+      availability: availability("09:00", "13:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Nisha Kulshreshtha",
+      email: "nisha.kulshreshtha@telecare.dev",
+      specialization: "radiologist",
+      experienceYears: 9,
+      bio: "Radiologist offering tele-reporting and second-opinion reads on imaging.",
+      consultationFee: 190,
+      city: "Mumbai",
+      state: "Maharashtra",
+      availability: availability("14:00", "19:00", [1, 2, 4]),
+    },
+    {
+      name: "Dr. Farah Siddiqui",
+      email: "farah.siddiqui@telecare.dev",
+      specialization: "critical_care_specialist",
+      experienceYears: 11,
+      bio: "Critical care specialist supporting ICU follow-up consults and discharge planning.",
+      consultationFee: 210,
+      city: "Lucknow",
+      state: "Uttar Pradesh",
+      availability: availability("16:00", "21:00", [2, 3, 5]),
+    },
+    {
+      name: "Dr. Rajeev Kumar",
+      email: "rajeev.kumar@telecare.dev",
+      specialization: "general_physician",
+      experienceYears: 3,
+      bio: "General physician early in career, keen on telemedicine and digital triage.",
+      consultationFee: 40,
+      city: "Jaipur",
+      state: "Rajasthan",
+      availability: availability("10:00", "16:00", [1, 2, 3, 4, 5]),
+    },
+    {
+      name: "Dr. Shalini Sinha",
+      email: "shalini.sinha@telecare.dev",
+      specialization: "internal_medicine",
+      experienceYears: 7,
+      bio: "Internal medicine specialist for complex multi-system diseases.",
+      consultationFee: 150,
+      city: "Ahmedabad",
+      state: "Gujarat",
+      availability: availability("09:00", "13:00", [1, 3, 5]),
+    },
+    {
+      name: "Dr. Ajay Yadav",
+      email: "ajay.yadav@telecare.dev",
+      specialization: "nephrologist",
+      experienceYears: 10,
+      bio: "Nephrologist working with CKD and dialysis follow-ups through teleconsults.",
+      consultationFee: 180,
+      city: "Delhi",
+      state: "Delhi",
+      availability: availability("11:00", "17:00", [2, 4]),
+    },
+    {
+      name: "Dr. Zoya Khan",
+      email: "zoya.khan@telecare.dev",
+      specialization: "oncologist",
+      experienceYears: 12,
+      bio: "Oncologist providing second opinions and survivorship care.",
+      consultationFee: 220,
+      city: "Mumbai",
+      state: "Maharashtra",
+      availability: availability("15:00", "20:00", [1, 3]),
     },
   ];
 
@@ -190,8 +492,8 @@ async function main() {
       dob: new Date("1990-01-15"),
       gender: Gender.MALE,
       bloodGroup: "A+",
-      phone: "+1 234 567 8901",
-      city: "New York",
+      phone: "+91 90000 00001",
+      city: "Delhi",
     },
     {
       name: "Aisha Khan",
@@ -199,8 +501,8 @@ async function main() {
       dob: new Date("1988-05-22"),
       gender: Gender.FEMALE,
       bloodGroup: "O+",
-      phone: "+1 987 654 3210",
-      city: "Chicago",
+      phone: "+91 90000 00002",
+      city: "Mumbai",
     },
     {
       name: "Robert Smith",
@@ -208,8 +510,251 @@ async function main() {
       dob: new Date("1975-11-03"),
       gender: Gender.MALE,
       bloodGroup: "B+",
-      phone: "+1 555 000 1234",
-      city: "San Francisco",
+      phone: "+91 90000 00003",
+      city: "Bangalore",
+    },
+    {
+      name: "Priya Sharma",
+      email: "priya.sharma@test.com",
+      dob: new Date("1995-03-10"),
+      gender: Gender.FEMALE,
+      bloodGroup: "AB+",
+      phone: "+91 90000 00004",
+      city: "Hyderabad",
+    },
+    {
+      name: "Rahul Jain",
+      email: "rahul.jain@test.com",
+      dob: new Date("1992-07-21"),
+      gender: Gender.MALE,
+      bloodGroup: "O-",
+      phone: "+91 90000 00005",
+      city: "Pune",
+    },
+    {
+      name: "Sneha Patel",
+      email: "sneha.patel@test.com",
+      dob: new Date("1986-11-02"),
+      gender: Gender.FEMALE,
+      bloodGroup: "B+",
+      phone: "+91 90000 00006",
+      city: "Jaipur",
+    },
+    {
+      name: "Aman Singh",
+      email: "aman.singh@test.com",
+      dob: new Date("1983-09-15"),
+      gender: Gender.MALE,
+      bloodGroup: "A-",
+      phone: "+91 90000 00007",
+      city: "Ahmedabad",
+    },
+    {
+      name: "Farah Ali",
+      email: "farah.ali@test.com",
+      dob: new Date("1998-12-25"),
+      gender: Gender.FEMALE,
+      bloodGroup: "O+",
+      phone: "+91 90000 00008",
+      city: "Lucknow",
+    },
+    {
+      name: "Vikram Rao",
+      email: "vikram.rao@test.com",
+      dob: new Date("1970-04-18"),
+      gender: Gender.MALE,
+      bloodGroup: "B-",
+      phone: "+91 90000 00009",
+      city: "Delhi",
+    },
+    {
+      name: "Neha Gupta",
+      email: "neha.gupta@test.com",
+      dob: new Date("1993-01-09"),
+      gender: Gender.FEMALE,
+      bloodGroup: "A+",
+      phone: "+91 90000 00010",
+      city: "Mumbai",
+    },
+    {
+      name: "Karan Arora",
+      email: "karan.arora@test.com",
+      dob: new Date("1989-06-30"),
+      gender: Gender.MALE,
+      bloodGroup: "AB-",
+      phone: "+91 90000 00011",
+      city: "Bangalore",
+    },
+    {
+      name: "Lata Iyer",
+      email: "lata.iyer@test.com",
+      dob: new Date("1965-02-14"),
+      gender: Gender.FEMALE,
+      bloodGroup: "O+",
+      phone: "+91 90000 00012",
+      city: "Hyderabad",
+    },
+    {
+      name: "Mohit Verma",
+      email: "mohit.verma@test.com",
+      dob: new Date("2001-10-05"),
+      gender: Gender.MALE,
+      bloodGroup: "A+",
+      phone: "+91 90000 00013",
+      city: "Pune",
+    },
+    {
+      name: "Sara Thomas",
+      email: "sara.thomas@test.com",
+      dob: new Date("1999-08-12"),
+      gender: Gender.FEMALE,
+      bloodGroup: "B+",
+      phone: "+91 90000 00014",
+      city: "Jaipur",
+    },
+    {
+      name: "Yusuf Khan",
+      email: "yusuf.khan@test.com",
+      dob: new Date("1980-03-03"),
+      gender: Gender.MALE,
+      bloodGroup: "O+",
+      phone: "+91 90000 00015",
+      city: "Ahmedabad",
+    },
+    {
+      name: "Anjali Mehta",
+      email: "anjali.mehta@test.com",
+      dob: new Date("1997-05-27"),
+      gender: Gender.FEMALE,
+      bloodGroup: "AB+",
+      phone: "+91 90000 00016",
+      city: "Lucknow",
+    },
+    {
+      name: "Rohit Kulkarni",
+      email: "rohit.kulkarni@test.com",
+      dob: new Date("1984-11-19"),
+      gender: Gender.MALE,
+      bloodGroup: "B+",
+      phone: "+91 90000 00017",
+      city: "Delhi",
+    },
+    {
+      name: "Divya Reddy",
+      email: "divya.reddy@test.com",
+      dob: new Date("1991-09-08"),
+      gender: Gender.FEMALE,
+      bloodGroup: "O-",
+      phone: "+91 90000 00018",
+      city: "Hyderabad",
+    },
+    {
+      name: "Imran Shaikh",
+      email: "imran.shaikh@test.com",
+      dob: new Date("1978-12-02"),
+      gender: Gender.MALE,
+      bloodGroup: "A+",
+      phone: "+91 90000 00019",
+      city: "Pune",
+    },
+    {
+      name: "Pooja Nair",
+      email: "pooja.nair@test.com",
+      dob: new Date("1987-04-28"),
+      gender: Gender.FEMALE,
+      bloodGroup: "B-",
+      phone: "+91 90000 00020",
+      city: "Mumbai",
+    },
+    {
+      name: "Gaurav Mishra",
+      email: "gaurav.mishra@test.com",
+      dob: new Date("1994-02-16"),
+      gender: Gender.MALE,
+      bloodGroup: "AB+",
+      phone: "+91 90000 00021",
+      city: "Bangalore",
+    },
+    {
+      name: "Riya Chawla",
+      email: "riya.chawla@test.com",
+      dob: new Date("2000-07-13"),
+      gender: Gender.FEMALE,
+      bloodGroup: "O+",
+      phone: "+91 90000 00022",
+      city: "Jaipur",
+    },
+    {
+      name: "Naveen Joshi",
+      email: "naveen.joshi@test.com",
+      dob: new Date("1972-01-04"),
+      gender: Gender.MALE,
+      bloodGroup: "A-",
+      phone: "+91 90000 00023",
+      city: "Ahmedabad",
+    },
+    {
+      name: "Shreya Banerjee",
+      email: "shreya.banerjee@test.com",
+      dob: new Date("1996-06-22"),
+      gender: Gender.FEMALE,
+      bloodGroup: "B+",
+      phone: "+91 90000 00024",
+      city: "Lucknow",
+    },
+    {
+      name: "Aditya Rao",
+      email: "aditya.rao@test.com",
+      dob: new Date("1982-10-29"),
+      gender: Gender.MALE,
+      bloodGroup: "O+",
+      phone: "+91 90000 00025",
+      city: "Delhi",
+    },
+    {
+      name: "Kriti Jain",
+      email: "kriti.jain@test.com",
+      dob: new Date("1990-09-11"),
+      gender: Gender.FEMALE,
+      bloodGroup: "A+",
+      phone: "+91 90000 00026",
+      city: "Hyderabad",
+    },
+    {
+      name: "Siddharth Malhotra",
+      email: "siddharth.malhotra@test.com",
+      dob: new Date("1985-03-07"),
+      gender: Gender.MALE,
+      bloodGroup: "B+",
+      phone: "+91 90000 00027",
+      city: "Pune",
+    },
+    {
+      name: "Anu Joseph",
+      email: "anu.joseph@test.com",
+      dob: new Date("1999-01-19"),
+      gender: Gender.FEMALE,
+      bloodGroup: "O+",
+      phone: "+91 90000 00028",
+      city: "Jaipur",
+    },
+    {
+      name: "Prateek Saxena",
+      email: "prateek.saxena@test.com",
+      dob: new Date("1979-08-04"),
+      gender: Gender.MALE,
+      bloodGroup: "AB+",
+      phone: "+91 90000 00029",
+      city: "Ahmedabad",
+    },
+    {
+      name: "Zainab Hussain",
+      email: "zainab.hussain@test.com",
+      dob: new Date("1992-12-30"),
+      gender: Gender.FEMALE,
+      bloodGroup: "A-",
+      phone: "+91 90000 00030",
+      city: "Lucknow",
     },
   ];
 
@@ -244,109 +789,300 @@ async function main() {
     console.log(`✅ Patient:  ${p.email}`);
   }
 
-  // Aliases for readability
+  // Aliases for key doctors and a few special-case patients
   const [drSarah, drChen, drPriya, drWilson, drEmily] = doctors.map((d) => d.profile);
-  const [john, aisha, robert] = patients.map((p) => p.record);
+  const [john, aisha, robert, priyaSharma, rahulJain] = patients.map((p) => p.record);
 
   // ─── APPOINTMENTS ──────────────────────────────────────────────────────────
-  // Wipe existing seed appointments so re-runs are clean.
-  const seedPatientIds = [john.id, aisha.id, robert.id];
+  // Wipe existing seed appointments/prescriptions so re-runs are clean.
+  const seedPatientIds = patients.map((p) => p.record.id);
   await prisma.appointment.deleteMany({ where: { patientId: { in: seedPatientIds } } });
+  await prisma.prescription.deleteMany({ where: { patientId: { in: seedPatientIds } } });
 
-  const apptData = [
-    // ── John ──────────────────────────────────────────────────────────────────
-    // TODAY + 90 min — use this for live video testing right now
+  const busyDoctorIds = [drSarah.id, drChen.id, drPriya.id, drWilson.id, drEmily.id];
+
+  const apptData: {
+    patientId: string;
+    doctorId: string;
+    scheduledAt: Date;
+    status: AppointmentStatus;
+    reason?: string;
+  }[] = [];
+
+  // John – mixed history with chronic follow-ups + live test appointment
+  apptData.push(
     {
-      patientId: john.id, doctorId: drSarah.id,
+      patientId: john.id,
+      doctorId: drSarah.id,
       scheduledAt: daysFromNow(0, new Date().getHours(), new Date().getMinutes() + 90),
       status: AppointmentStatus.CONFIRMED,
       reason: "General health check-up and blood pressure review",
     },
-    // Tomorrow with Cardiology
     {
-      patientId: john.id, doctorId: drChen.id,
+      patientId: john.id,
+      doctorId: drChen.id,
       scheduledAt: daysFromNow(1, 11, 0),
       status: AppointmentStatus.PENDING,
       reason: "Routine ECG follow-up",
     },
-    // Completed 3 days ago
     {
-      patientId: john.id, doctorId: drPriya.id,
+      patientId: john.id,
+      doctorId: drPriya.id,
       scheduledAt: daysFromNow(-3, 14, 0),
       status: AppointmentStatus.COMPLETED,
       reason: "Skin rash on forearm",
     },
-    // Completed 2 weeks ago
     {
-      patientId: john.id, doctorId: drSarah.id,
+      patientId: john.id,
+      doctorId: drSarah.id,
       scheduledAt: daysFromNow(-14, 10, 30),
       status: AppointmentStatus.COMPLETED,
       reason: "Flu symptoms and fever",
     },
-
-    // ── Aisha ─────────────────────────────────────────────────────────────────
-    // Day after tomorrow
+    // Reschedule pattern: cancelled then new confirmed
     {
-      patientId: aisha.id, doctorId: drWilson.id,
+      patientId: john.id,
+      doctorId: drChen.id,
+      scheduledAt: daysFromNow(-1, 10, 0),
+      status: AppointmentStatus.CANCELLED_BY_PATIENT,
+      reason: "Follow-up for chest discomfort (cancelled)",
+    },
+    {
+      patientId: john.id,
+      doctorId: drChen.id,
+      scheduledAt: daysFromNow(2, 10, 30),
+      status: AppointmentStatus.CONFIRMED,
+      reason: "Rescheduled follow-up for chest discomfort",
+    },
+  );
+
+  // Aisha – paediatrics + neurology with cancellations and no-show
+  apptData.push(
+    {
+      patientId: aisha.id,
+      doctorId: drWilson.id,
       scheduledAt: daysFromNow(2, 9, 0),
       status: AppointmentStatus.PENDING,
       reason: "Child health consultation for son",
     },
-    // 5 days from now with Dermatology
     {
-      patientId: aisha.id, doctorId: drPriya.id,
+      patientId: aisha.id,
+      doctorId: drPriya.id,
       scheduledAt: daysFromNow(5, 13, 0),
       status: AppointmentStatus.CONFIRMED,
       reason: "Annual skin check",
     },
-    // Completed last week
     {
-      patientId: aisha.id, doctorId: drEmily.id,
+      patientId: aisha.id,
+      doctorId: drEmily.id,
       scheduledAt: daysFromNow(-7, 15, 0),
       status: AppointmentStatus.COMPLETED,
       reason: "Recurring migraines, seeking long-term treatment plan",
     },
-    // Cancelled
     {
-      patientId: aisha.id, doctorId: drChen.id,
+      patientId: aisha.id,
+      doctorId: drChen.id,
       scheduledAt: daysFromNow(-10, 10, 0),
       status: AppointmentStatus.CANCELLED_BY_PATIENT,
       reason: "Heart palpitations check",
     },
-
-    // ── Robert ────────────────────────────────────────────────────────────────
-    // TODAY + 2 hours — doctor can start this call
     {
-      patientId: robert.id, doctorId: drSarah.id,
+      patientId: aisha.id,
+      doctorId: drEmily.id,
+      scheduledAt: daysFromNow(-2, 18, 0),
+      status: AppointmentStatus.NO_SHOW,
+      reason: "Missed follow-up migraine consultation",
+    },
+  );
+
+  // Robert – chronic multi-specialist history
+  apptData.push(
+    {
+      patientId: robert.id,
+      doctorId: drSarah.id,
       scheduledAt: daysFromNow(0, new Date().getHours() + 2, 0),
       status: AppointmentStatus.CONFIRMED,
       reason: "Diabetes management and medication review",
     },
-    // 3 days from now
     {
-      patientId: robert.id, doctorId: drEmily.id,
+      patientId: robert.id,
+      doctorId: drEmily.id,
       scheduledAt: daysFromNow(3, 16, 0),
       status: AppointmentStatus.PENDING,
       reason: "Persistent headaches after work",
     },
-    // Completed last month
     {
-      patientId: robert.id, doctorId: drChen.id,
+      patientId: robert.id,
+      doctorId: drChen.id,
       scheduledAt: daysFromNow(-30, 11, 0),
       status: AppointmentStatus.COMPLETED,
       reason: "Chest tightness during exercise",
     },
-    // Cancelled by doctor
     {
-      patientId: robert.id, doctorId: drPriya.id,
+      patientId: robert.id,
+      doctorId: drPriya.id,
       scheduledAt: daysFromNow(-5, 12, 0),
       status: AppointmentStatus.CANCELLED_BY_DOCTOR,
       reason: "Psoriasis consultation",
     },
-  ];
+    {
+      patientId: robert.id,
+      doctorId: drSarah.id,
+      scheduledAt: daysFromNow(-20, 10, 0),
+      status: AppointmentStatus.COMPLETED,
+      reason: "Long-term diabetes follow-up and HbA1c review",
+    },
+  );
+
+  // Priya Sharma – only cancelled appointments
+  apptData.push(
+    {
+      patientId: priyaSharma.id,
+      doctorId: drPriya.id,
+      scheduledAt: daysFromNow(-4, 11, 0),
+      status: AppointmentStatus.CANCELLED_BY_PATIENT,
+      reason: "Dermatology consult (cancelled)",
+    },
+    {
+      patientId: priyaSharma.id,
+      doctorId: drChen.id,
+      scheduledAt: daysFromNow(-1, 15, 0),
+      status: AppointmentStatus.CANCELLED_BY_DOCTOR,
+      reason: "Chest pain evaluation (doctor unavailable)",
+    },
+  );
+
+  // Rahul Jain – only upcoming appointments
+  apptData.push(
+    {
+      patientId: rahulJain.id,
+      doctorId: drSarah.id,
+      scheduledAt: daysFromNow(3, 9, 30),
+      status: AppointmentStatus.CONFIRMED,
+      reason: "Annual health check-up",
+    },
+    {
+      patientId: rahulJain.id,
+      doctorId: drChen.id,
+      scheduledAt: daysFromNow(10, 11, 0),
+      status: AppointmentStatus.PENDING,
+      reason: "Preventive cardiology baseline assessment",
+    },
+  );
+
+  // Remaining patients: clustered appointments across busy and moderate doctors
+  const remainingPatients = patients.slice(5); // skip first five handled above
+  const otherDoctorIds = doctors
+    .map((d) => d.profile.id)
+    .filter((id) => !busyDoctorIds.includes(id));
+
+  remainingPatients.forEach((p, idx) => {
+    const patient = p.record;
+    const baseDayOffset = (idx % 6) - 3; // spread across a +/-3 day window
+
+    // Completed appointment with a busy doctor
+    apptData.push({
+      patientId: patient.id,
+      doctorId: busyDoctorIds[idx % busyDoctorIds.length],
+      scheduledAt: daysFromNow(baseDayOffset, 10 + (idx % 5), 0),
+      status: AppointmentStatus.COMPLETED,
+      reason: "Follow-up consultation for chronic condition",
+    });
+
+    // Upcoming appointment with a moderate/low doctor
+    apptData.push({
+      patientId: patient.id,
+      doctorId: otherDoctorIds[idx % otherDoctorIds.length],
+      scheduledAt: daysFromNow(5 + (idx % 7), 9 + (idx % 4), 30),
+      status: AppointmentStatus.CONFIRMED,
+      reason: "Planned follow-up visit",
+    });
+
+    // Occasionally add a cancelled or no-show
+    if (idx % 3 === 0) {
+      apptData.push({
+        patientId: patient.id,
+        doctorId: busyDoctorIds[(idx + 1) % busyDoctorIds.length],
+        scheduledAt: daysFromNow(-7, 12, 0),
+        status: idx % 2 === 0 ? AppointmentStatus.CANCELLED_BY_PATIENT : AppointmentStatus.NO_SHOW,
+        reason: "Missed or cancelled appointment for routine review",
+      });
+    }
+  });
 
   const appointments = await prisma.appointment.createMany({ data: apptData });
   console.log(`\n✅ Created ${appointments.count} appointments`);
+
+  // ─── PRESCRIPTIONS & REPORT FILES FOR COMPLETED APPOINTMENTS ───────────────
+
+  const completedAppts = await prisma.appointment.findMany({
+    where: { patientId: { in: seedPatientIds }, status: AppointmentStatus.COMPLETED },
+    select: { id: true, doctorId: true, patientId: true, scheduledAt: true },
+  });
+
+  for (const appt of completedAppts.slice(0, 20)) {
+    const prescription = await prisma.prescription.create({
+      data: {
+        doctorId: appt.doctorId,
+        patientId: appt.patientId,
+        appointmentId: appt.id,
+        notes: "Follow the prescribed medication and lifestyle recommendations. Seek immediate help if symptoms worsen.",
+        items: {
+          create: [
+            {
+              drugName: "Tab. Metformin 500mg",
+              dosage: "500 mg",
+              frequency: "Twice daily",
+              duration: "30 days",
+              instructions: "Take after meals.",
+            },
+            {
+              drugName: "Tab. Vitamin D3 60,000 IU",
+              dosage: "One tablet",
+              frequency: "Once weekly",
+              duration: "8 weeks",
+              instructions: "Take with a fatty meal.",
+            },
+          ],
+        },
+      },
+    });
+
+    const patientUser = await prisma.patient.findUnique({
+      where: { id: appt.patientId },
+      select: { userId: true },
+    });
+    const doctorProfile = await prisma.doctorProfile.findUnique({
+      where: { id: appt.doctorId },
+      select: { userId: true },
+    });
+    if (!patientUser || !doctorProfile) continue;
+
+    await prisma.file.createMany({
+      data: [
+        {
+          ownerId: patientUser.userId,
+          appointmentId: appt.id,
+          uploadedById: doctorProfile.userId,
+          type: "REPORT",
+          storageKey: `reports/${appt.patientId}/${appt.id}/lab-cbc-${appt.scheduledAt.toISOString().slice(0, 10)}.pdf`,
+          originalName: "Complete Blood Count.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: BigInt(120_000),
+        },
+        {
+          ownerId: patientUser.userId,
+          appointmentId: appt.id,
+          uploadedById: doctorProfile.userId,
+          type: "IMAGE",
+          storageKey: `images/${appt.patientId}/${appt.id}/scan-${appt.scheduledAt.toISOString().slice(0, 10)}.png`,
+          originalName: "Scan Image.png",
+          mimeType: "image/png",
+          sizeBytes: BigInt(450_000),
+        },
+      ],
+    });
+  }
 
   // ─── SUMMARY ───────────────────────────────────────────────────────────────
 
@@ -359,16 +1095,22 @@ async function main() {
   console.log("\n" + "═".repeat(60));
   console.log("  TEST CREDENTIALS  (password same for all: Test@1234)");
   console.log("═".repeat(60));
-  console.log("\n  DOCTORS");
+  console.log(`\n  DOCTORS (total: ${doctorSeeds.length})`);
   console.log("  ─────────────────────────────────────────────────────");
-  for (const d of doctorSeeds) {
+  for (const d of doctorSeeds.slice(0, 10)) {
     console.log(`  ${d.name.padEnd(25)} ${d.email}`);
   }
-  console.log("\n  PATIENTS");
+  if (doctorSeeds.length > 10) {
+    console.log(`  ...and ${doctorSeeds.length - 10} more doctors`);
+  }
+  console.log(`\n  PATIENTS (total: ${patientSeeds.length})`);
   console.log("  ─────────────────────────────────────────────────────");
-  console.log("  John Doe                  john@test.com");
-  console.log("  Aisha Khan                aisha@test.com");
-  console.log("  Robert Smith              robert@test.com");
+  for (const p of patientSeeds.slice(0, 10)) {
+    console.log(`  ${p.name.padEnd(25)} ${p.email}`);
+  }
+  if (patientSeeds.length > 10) {
+    console.log(`  ...and ${patientSeeds.length - 10} more patients`);
+  }
   console.log("\n  All passwords:  Test@1234");
   console.log("\n" + "─".repeat(60));
   console.log("  LIVE VIDEO TEST  (appointment in ~90 minutes)");

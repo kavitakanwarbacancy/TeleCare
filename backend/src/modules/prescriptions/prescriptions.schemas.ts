@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { config } from "../../config";
 
 const uuidSchema = z.string().uuid("Invalid ID format");
 
@@ -25,5 +26,10 @@ export const createPrescriptionSchema = z.object({
 });
 
 export const listMyPrescriptionsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(50).default(50),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(config.pagination.maxLimit)
+    .default(config.pagination.defaultLimit),
 });

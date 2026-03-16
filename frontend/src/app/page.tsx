@@ -19,8 +19,9 @@ import {
     ChevronDown,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
+import { doctorsApi, type SpecializationOption } from '@/services/api';
 import { getStates, getCities } from '@/constants/india-locations';
-import { SPECIALTIES } from '@/constants/specialties';
 
 const SELECT_CLASS =
     'w-full appearance-none pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm disabled:opacity-60 disabled:cursor-not-allowed';
@@ -47,17 +48,27 @@ function FindDoctorsBlock() {
     const router = useRouter();
     const [stateCode, setStateCode] = React.useState('');
     const [city, setCity] = React.useState('');
-    const [specialty, setSpecialty] = React.useState('All');
+    const [selectedSpecialtyId, setSelectedSpecialtyId] = React.useState<string>('all');
 
     const states = React.useMemo(() => getStates(), []);
     const cities = React.useMemo(() => (stateCode ? getCities(stateCode) : []), [stateCode]);
     React.useEffect(() => setCity(''), [stateCode]);
 
+    const {
+        data: specializationData,
+        isLoading: isLoadingSpecializations,
+        isError: isErrorSpecializations,
+    } = useQuery({
+        queryKey: ['doctor', 'specializations'],
+        queryFn: () => doctorsApi.getSpecializations(),
+        staleTime: 1000 * 60 * 60,
+    });
+
     const handleFindDoctors = () => {
         const params = new URLSearchParams();
         if (stateCode) params.set('stateCode', stateCode);
         if (city) params.set('city', city);
-        if (specialty && specialty !== 'All') params.set('specialty', specialty);
+        if (selectedSpecialtyId && selectedSpecialtyId !== 'all') params.set('specialty', selectedSpecialtyId);
         router.push(`/doctors${params.toString() ? `?${params.toString()}` : ''}`);
     };
 
@@ -124,15 +135,21 @@ function FindDoctorsBlock() {
                         <div className="relative">
                             <select
                                 id="landing-specialty"
-                                value={specialty}
-                                onChange={(e) => setSpecialty(e.target.value)}
+                                value={selectedSpecialtyId}
+                                onChange={(e) => setSelectedSpecialtyId(e.target.value)}
                                 className={SELECT_CLASS}
+                                disabled={isLoadingSpecializations || isErrorSpecializations}
                             >
-                                {SPECIALTIES.map((s) => (
-                                    <option key={s} value={s}>
-                                        {s}
-                                    </option>
-                                ))}
+                                <option value="all">
+                                    {isLoadingSpecializations ? 'Loading specialties...' : 'All specialties'}
+                                </option>
+                                {!isLoadingSpecializations &&
+                                    !isErrorSpecializations &&
+                                    specializationData?.data.map((s: SpecializationOption) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name}
+                                        </option>
+                                    ))}
                             </select>
                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                         </div>

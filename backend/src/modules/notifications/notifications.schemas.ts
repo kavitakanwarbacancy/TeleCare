@@ -1,8 +1,14 @@
 import { z } from "zod";
+import { config } from "../../config";
 
 /** Query params for GET /notifications (paginated list). */
 export const listNotificationsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(config.pagination.maxLimit)
+    .default(config.pagination.defaultLimit),
   before: z.string().datetime().optional(), // ISO date cursor for createdAt
 });
 

@@ -1,11 +1,3 @@
-/**
- * Doctor specialties for discovery filters. Keep in sync across dashboard, doctors list, and landing.
- */
-export const SPECIALTIES = [
-  "All",
-  "Cardiology",
-  "Dermatology",
-  "Pediatrics",
-  "Neurology",
-  "General Medicine",
-] as const;
+// Deprecated – discovery filters now use specializations from the backend.
+// This file is kept only as a placeholder; do not import it in new code.
+export const SPECIALTIES: string[] = [];

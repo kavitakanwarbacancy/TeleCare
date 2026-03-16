@@ -3,18 +3,17 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { Search, Star, Clock, MapPin, ArrowRight, Loader2, ChevronDown } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Search, Star, Clock, MapPin, ArrowRight, Loader2, ChevronDown, XCircle } from "lucide-react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { doctorsApi, type DoctorSummary } from "@/services/api";
+import { doctorsApi, type DoctorSummary, type SpecializationOption } from "@/services/api";
 import { getStates, getCities } from "@/constants/india-locations";
-import { SPECIALTIES } from "@/constants/specialties";
 
 const SELECT_CLASS =
   "w-full appearance-none pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm disabled:opacity-60 disabled:cursor-not-allowed";
 
-function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
+function DoctorCard({ doctor, specializationLabel }: { doctor: DoctorSummary; specializationLabel: string }) {
   return (
     <div className="w-full max-w-full bg-white p-4 sm:p-6 rounded-3xl sm:rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
       <div className="flex items-start gap-4 sm:gap-6 mb-6">
@@ -37,7 +36,7 @@ function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
               <Star className="w-3 h-3 fill-amber-500" /> 4.8
             </div>
           </div>
-          <p className="text-sm font-semibold text-brand-600 mb-2">{doctor.specialization}</p>
+          <p className="text-sm font-semibold text-brand-600 mb-2">{specializationLabel}</p>
           <div className="flex items-center gap-4 text-xs text-slate-500 font-medium flex-wrap">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
@@ -72,11 +71,30 @@ function DoctorCard({ doctor }: { doctor: DoctorSummary }) {
 }
 
 export default function DoctorDiscovery() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [selectedSpecialty, setSelectedSpecialty] = React.useState("All");
+  const [selectedSpecialtyId, setSelectedSpecialtyId] = React.useState<string>("all");
   const [selectedStateCode, setSelectedStateCode] = React.useState("");
   const [selectedCity, setSelectedCity] = React.useState("");
+
+  const {
+    data: specializationData,
+    isLoading: isLoadingSpecializations,
+    isError: isErrorSpecializations,
+  } = useQuery({
+    queryKey: ["doctor", "specializations"],
+    queryFn: () => doctorsApi.getSpecializations(),
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const specializationNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    specializationData?.data.forEach((s) => {
+      map.set(s.id, s.name);
+    });
+    return map;
+  }, [specializationData]);
 
   React.useEffect(() => {
     const stateCode = searchParams.get("stateCode");
@@ -84,8 +102,12 @@ export default function DoctorDiscovery() {
     const specialty = searchParams.get("specialty");
     if (stateCode) setSelectedStateCode(stateCode);
     if (city) setSelectedCity(city);
-    if (specialty && SPECIALTIES.includes(specialty as (typeof SPECIALTIES)[number])) setSelectedSpecialty(specialty);
-  }, [searchParams]);
+    if (specialty && specializationData?.data.some((s: SpecializationOption) => s.id === specialty)) {
+      setSelectedSpecialtyId(specialty);
+    } else {
+      setSelectedSpecialtyId("all");
+    }
+  }, [searchParams, specializationData]);
 
   const states = React.useMemo(() => getStates(), []);
   const selectedStateName = React.useMemo(
@@ -103,10 +125,10 @@ export default function DoctorDiscovery() {
   };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["doctors", selectedSpecialty, selectedStateName, selectedCity],
+    queryKey: ["doctors", selectedSpecialtyId, selectedStateName, selectedCity],
     queryFn: () =>
       doctorsApi.list({
-        specialization: selectedSpecialty !== "All" ? selectedSpecialty : undefined,
+        specialization: selectedSpecialtyId !== "all" ? selectedSpecialtyId : undefined,
         state: selectedStateName || undefined,
         city: selectedCity || undefined,
         limit: 50,
@@ -131,19 +153,35 @@ export default function DoctorDiscovery() {
     >
       {/* Search & Filter */}
       <div className="w-full max-w-full bg-white p-4 sm:p-6 lg:p-8 rounded-3xl sm:rounded-[40px] border border-slate-100 shadow-sm space-y-6 overflow-x-hidden">
-        <div className="flex-1 w-full relative group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
-          <input
-            type="text"
-            placeholder="Search by doctor name or specialization..."
-            className="w-full max-w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-4 sm:py-5 bg-slate-50 border-2 border-transparent rounded-2xl sm:rounded-[24px] focus:bg-white focus:border-brand-500 outline-none transition-all font-medium text-base sm:text-lg"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1 w-full relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search by doctor name or specialization..."
+              className="w-full max-w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-4 sm:py-5 bg-slate-50 border-2 border-transparent rounded-2xl sm:rounded-[24px] focus:bg-white focus:border-brand-500 outline-none transition-all font-medium text-base sm:text-lg"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedStateCode("");
+              setSelectedCity("");
+              setSelectedSpecialtyId("all");
+              router.push("/patient/doctors");
+            }}
+            className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 whitespace-nowrap"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            Clear filters
+          </button>
         </div>
 
-        {/* State & City dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* State, City & Specialty dropdowns */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label htmlFor="state-select" className="block text-sm font-bold text-slate-700 mb-2">
               State
@@ -187,22 +225,32 @@ export default function DoctorDiscovery() {
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
             </div>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pb-1">
-          {SPECIALTIES.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSelectedSpecialty(s)}
-              className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-full text-sm font-bold whitespace-normal break-words text-left transition-all ${
-                selectedSpecialty === s
-                  ? "bg-brand-500 text-white shadow-lg shadow-brand-100"
-                  : "bg-slate-50 text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+          <div>
+            <label htmlFor="patient-specialty-select" className="block text-sm font-bold text-slate-700 mb-2">
+              Specialty
+            </label>
+            <div className="relative">
+              <select
+                id="patient-specialty-select"
+                value={selectedSpecialtyId}
+                onChange={(e) => setSelectedSpecialtyId(e.target.value)}
+                className={SELECT_CLASS}
+                disabled={isLoadingSpecializations || isErrorSpecializations}
+              >
+                <option value="all">
+                  {isLoadingSpecializations ? "Loading specialties..." : "All specialties"}
+                </option>
+                {!isLoadingSpecializations &&
+                  !isErrorSpecializations &&
+                  specializationData?.data.map((s: SpecializationOption) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -234,9 +282,11 @@ export default function DoctorDiscovery() {
 
         {!isLoading && !isError && filtered.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 xl:gap-8 w-full max-w-full">
-            {filtered.map((doctor) => (
-              <DoctorCard key={doctor.id} doctor={doctor} />
-            ))}
+            {filtered.map((doctor) => {
+              const specializationLabel =
+                specializationNameById.get(doctor.specialization) ?? doctor.specialization;
+              return <DoctorCard key={doctor.id} doctor={doctor} specializationLabel={specializationLabel} />;
+            })}
           </div>
         )}
       </div>
