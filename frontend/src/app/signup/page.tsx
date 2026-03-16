@@ -188,7 +188,7 @@ export default function SignupPage() {
               <div className="flex gap-3">
                 <div className="w-40">
                   <select
-                    className="w-full px-3 py-3 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none text-sm font-medium text-slate-700"
+                    className="w-full min-h-[58px] px-3 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-brand-500 outline-none text-sm font-medium text-slate-700"
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
                   >
