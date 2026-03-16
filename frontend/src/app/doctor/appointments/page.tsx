@@ -98,7 +98,10 @@ function AppointmentCard({
             <Clock className="w-3.5 h-3.5" /> Time
           </div>
           <p className="text-sm font-bold text-slate-700">
-            {format(new Date(appt.scheduledAt), "hh:mm a")}
+            {format(new Date(appt.scheduledAt), "hh:mm a")}{" "}
+            <span className="text-xs font-semibold text-slate-400">
+              ({appt.durationMinutes} min)
+            </span>
           </p>
         </div>
         <div className="space-y-1">

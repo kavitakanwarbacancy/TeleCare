@@ -87,6 +87,8 @@ export interface DoctorSummary {
   experienceYears: number | null;
   bio: string | null;
   consultationFee: string | null;
+  registrationNumber: string | null;
+  degree: string | null;
   city: string | null;
   state: string | null;
   verified: boolean;
@@ -100,7 +102,30 @@ export interface AvailabilitySlot {
   startTime: string; // "HH:mm"
   endTime: string;
   slotDuration: number; // minutes
-  bufferTime: number;
+}
+
+export type UpdateDoctorProfileInput = {
+  specialization?: string;
+  experienceYears?: number;
+  bio?: string | null;
+  consultationFee?: number | null;
+  registrationNumber?: string | null;
+  degree?: string | null;
+  city?: string | null;
+  state?: string | null;
+  isActive?: boolean;
+};
+
+export type AvailabilitySlotInput = {
+  weekday: number;
+  startTime: string;
+  endTime: string;
+  slotDuration: number;
+};
+
+export interface SpecializationOption {
+  id: string;
+  name: string;
 }
 
 export const doctorsApi = {
@@ -125,6 +150,26 @@ export const doctorsApi = {
 
   getAvailability: (id: string) =>
     request<{ availability: AvailabilitySlot[] }>(`/doctors/${id}/availability`),
+
+  getMe: () => request<DoctorSummary>("/doctors/me"),
+
+  updateMe: (data: UpdateDoctorProfileInput) =>
+    request<DoctorSummary>("/doctors/me", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  getMyAvailability: () =>
+    request<{ availability: AvailabilitySlot[] }>("/doctors/me/availability"),
+
+  updateMyAvailability: (slots: AvailabilitySlotInput[]) =>
+    request<{ availability: AvailabilitySlot[] }>("/doctors/me/availability", {
+      method: "PUT",
+      body: JSON.stringify({ availability: slots }),
+    }),
+
+  getSpecializations: () =>
+    request<{ data: SpecializationOption[] }>("/doctors/specializations"),
 };
 
 // ─── Appointments ─────────────────────────────────────────────────────────────

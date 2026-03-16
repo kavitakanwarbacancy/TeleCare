@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
-import { doctorsApi } from "@/services/api";
+import { doctorsApi, type AvailabilitySlot } from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function PublicDoctorProfilePage() {
@@ -30,6 +30,12 @@ export default function PublicDoctorProfilePage() {
   const { data: doctor, isLoading, isError } = useQuery({
     queryKey: ["doctor", "public", id],
     queryFn: () => doctorsApi.getById(id),
+    enabled: !!id,
+  });
+
+  const { data: availabilityData } = useQuery({
+    queryKey: ["doctor", "public", id, "availability"],
+    queryFn: () => doctorsApi.getAvailability(id),
     enabled: !!id,
   });
 
@@ -168,6 +174,10 @@ export default function PublicDoctorProfilePage() {
             </div>
           )}
 
+          {availabilityData?.availability?.length ? (
+            <DoctorAvailability slots={availabilityData.availability} />
+          ) : null}
+
           {/* CTA: view-only for guests; book link for logged-in patients */}
           <div className="bg-white p-8 rounded-[48px] border border-slate-100 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
@@ -198,6 +208,56 @@ export default function PublicDoctorProfilePage() {
           </div>
         </motion.div>
       </main>
+    </div>
+  );
+}
+
+function DoctorAvailability({ slots }: { slots: AvailabilitySlot[] }) {
+  const byDay = React.useMemo(() => {
+    const map = new Map<number, AvailabilitySlot[]>();
+    for (const slot of slots) {
+      const list = map.get(slot.weekday) ?? [];
+      list.push(slot);
+      map.set(slot.weekday, list);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([weekday, daySlots]) => ({
+        weekday,
+        slots: daySlots.sort(
+          (a, b) => a.startTime.localeCompare(b.startTime),
+        ),
+      }));
+  }, [slots]);
+
+  const labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  return (
+    <div className="bg-white p-8 sm:p-10 rounded-[48px] border border-slate-100 shadow-sm space-y-4">
+      <h2 className="text-2xl font-bold text-slate-900">Typical availability</h2>
+      <p className="text-sm text-slate-500">
+        These are the hours this doctor usually offers video consultations. Actual available slots
+        may vary when you book.
+      </p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+        {byDay.map(({ weekday, slots: daySlots }) => (
+          <div
+            key={weekday}
+            className="border border-slate-100 rounded-2xl p-4 bg-slate-50"
+          >
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+              {labels[weekday]}
+            </p>
+            <ul className="space-y-1.5 text-xs text-slate-600">
+              {daySlots.map((s) => (
+                <li key={`${s.startTime}-${s.endTime}`}>
+                  {s.startTime}–{s.endTime} · {s.slotDuration} min
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

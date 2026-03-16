@@ -22,7 +22,7 @@ function buildSlots(availability: AvailabilitySlot[], date: Date): string[] {
   for (const a of availability.filter((x) => x.weekday === weekday)) {
     const [sh, sm] = a.startTime.split(':').map(Number);
     const [eh, em] = a.endTime.split(':').map(Number);
-    const step = (a.slotDuration || 30) + (a.bufferTime || 0);
+    const step = a.slotDuration || 30;
 
     let cursor = setMinutes(setHours(startOfDay(date), sh), sm);
     const end = setMinutes(setHours(startOfDay(date), eh), em);
