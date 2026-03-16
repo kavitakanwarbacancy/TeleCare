@@ -58,10 +58,17 @@ const adminNav: NavItem[] = [
   { to: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
-function SidebarItem({ to, icon: Icon, label, active }: NavItem & { active: boolean }) {
+function SidebarItem({
+  to,
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: NavItem & { active: boolean; onClick?: () => void }) {
   return (
     <Link
       href={to}
+      onClick={onClick}
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
         active
@@ -96,7 +103,35 @@ export const Layout = ({ children, role }: LayoutProps) => {
   const displayName = user?.name ?? "Loading...";
   const avatarSeed = user?.id ?? "default";
 
+  React.useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  React.useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  React.useEffect(() => {
+    if (!isMobileMenuOpen) {
+      document.body.style.overflow = "";
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
+
   function handleLogout() {
+    setIsMobileMenuOpen(false);
     logout();
     router.push("/login");
   }
@@ -133,14 +168,14 @@ export const Layout = ({ children, role }: LayoutProps) => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex w-full max-w-full overflow-x-hidden">
       {/* Sidebar — Desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 p-6 fixed h-full z-40">
         <Sidebar />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 min-h-screen flex flex-col">
+      <main className="flex-1 lg:ml-64 min-h-screen flex flex-col w-full max-w-full overflow-x-hidden">
         {/* Header */}
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 lg:px-10 flex items-center justify-between sticky top-0 z-30">
           <button
@@ -178,7 +213,9 @@ export const Layout = ({ children, role }: LayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <div className="p-6 lg:p-10 flex-1">{children}</div>
+        <div className="px-4 py-6 sm:px-6 lg:px-10 lg:py-10 flex-1 w-full max-w-full overflow-x-hidden">
+          {children}
+        </div>
       </main>
 
       {/* Mobile Menu Overlay */}
@@ -206,7 +243,12 @@ export const Layout = ({ children, role }: LayoutProps) => {
             </div>
             <nav className="flex-1 flex flex-col gap-2">
               {navItems.map((item) => (
-                <SidebarItem key={item.to} {...item} active={pathname === item.to} />
+                <SidebarItem
+                  key={item.to}
+                  {...item}
+                  active={pathname === item.to}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
               ))}
             </nav>
           </aside>
