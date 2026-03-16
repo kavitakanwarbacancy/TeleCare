@@ -430,7 +430,7 @@ export default function DoctorAppointments() {
       setActionId(null);
       setPendingDecline(null);
     },
-    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", user?.id] }),
+    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", user?.id, "all"] }),
     onError: (err: Error) => alert(err.message),
   });
 
@@ -438,7 +438,7 @@ export default function DoctorAppointments() {
     mutationFn: (id: string) => appointmentsApi.cancel(id),
     onMutate: (id) => setActionId({ id, action: "cancel" }),
     onSettled: () => setActionId(null),
-    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", user?.id] }),
+    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", user?.id, "all"] }),
     onError: (err: Error) => alert(err.message),
   });
 

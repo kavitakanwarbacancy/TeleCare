@@ -15,8 +15,27 @@ import {
 const router = Router();
 
 /**
+ * GET /doctors/me
+ * Get own doctor profile. Doctor-only. Must be defined before /:id.
+ */
+router.get(
+  "/me",
+  requireAuth,
+  requireRole("DOCTOR"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user!.sub;
+      const result = await doctorsService.getMyProfile(userId);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
  * PUT /doctors/me
- * Update own doctor profile. Doctor-only. Must be defined before /:id.
+ * Update own doctor profile. Doctor-only.
  */
 router.put(
   "/me",
@@ -31,6 +50,44 @@ router.put(
       }
       const userId = (req as AuthenticatedRequest).user!.sub;
       const result = await doctorsService.updateMyProfile(userId, parsed.data);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
+ * GET /doctors/me/availability
+ * Get own weekly availability. Doctor-only.
+ */
+router.get(
+  "/me/availability",
+  requireAuth,
+  requireRole("DOCTOR"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user!.sub;
+      const result = await doctorsService.getMyAvailability(userId);
+      res.json(result);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+/**
+ * PUT /doctors/me/availability
+ * Replace own weekly availability. Doctor-only.
+ */
+router.put(
+  "/me/availability",
+  requireAuth,
+  requireRole("DOCTOR"),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = (req as AuthenticatedRequest).user!.sub;
+      const result = await doctorsService.updateMyAvailability(userId, req.body);
       res.json(result);
     } catch (e) {
       next(e);
@@ -55,6 +112,22 @@ router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     next(e);
   }
 });
+
+/**
+ * GET /doctors/specializations
+ * Public list of all available specializations.
+ */
+router.get(
+  "/specializations",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await doctorsService.listSpecializations();
+      res.json({ data: result });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 /**
  * GET /doctors/:id
