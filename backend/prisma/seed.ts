@@ -15,11 +15,67 @@ const daysFromNow = (n: number, hour = 10, minute = 0) => {
 
 // ─── Availability builder (all weekdays for a given time window) ──────────────
 function availability(startTime: string, endTime: string, weekdays: number[]) {
-  return weekdays.map((weekday) => ({ weekday, startTime, endTime, slotDuration: 30, bufferTime: 5 }));
+  return weekdays.map((weekday) => ({ weekday, startTime, endTime, slotDuration: 30 }));
 }
 
 async function main() {
   console.log("🌱 Seeding TeleCare database...\n");
+
+  // ─── SPECIALIZATIONS ─────────────────────────────────────────────────────────
+
+  const SPECIALIZATIONS = [
+    { id: "general_physician", name: "General Physician" },
+    { id: "family_medicine", name: "Family Medicine" },
+    { id: "internal_medicine", name: "Internal Medicine" },
+    { id: "pediatrician", name: "Pediatrician" },
+    { id: "gynecologist_obstetrician", name: "Gynecologist / Obstetrician (OB-GYN)" },
+    { id: "fertility_specialist", name: "Fertility Specialist" },
+    { id: "dermatologist", name: "Dermatologist" },
+    { id: "cosmetologist", name: "Cosmetologist" },
+    { id: "trichologist", name: "Trichologist" },
+    { id: "cardiologist", name: "Cardiologist" },
+    { id: "cardiac_surgeon", name: "Cardiac Surgeon" },
+    { id: "orthopedic_doctor", name: "Orthopedic Doctor" },
+    { id: "rheumatologist", name: "Rheumatologist" },
+    { id: "sports_medicine_specialist", name: "Sports Medicine Specialist" },
+    { id: "neurologist", name: "Neurologist" },
+    { id: "neurosurgeon", name: "Neurosurgeon" },
+    { id: "psychiatrist", name: "Psychiatrist" },
+    { id: "psychologist", name: "Psychologist" },
+    { id: "psychotherapist", name: "Psychotherapist" },
+    { id: "gastroenterologist", name: "Gastroenterologist" },
+    { id: "hepatologist", name: "Hepatologist" },
+    { id: "ent_specialist", name: "ENT Specialist (Otolaryngologist)" },
+    { id: "nephrologist", name: "Nephrologist" },
+    { id: "urologist", name: "Urologist" },
+    { id: "endocrinologist", name: "Endocrinologist" },
+    { id: "diabetologist", name: "Diabetologist" },
+    { id: "pulmonologist", name: "Pulmonologist" },
+    { id: "oncologist", name: "Oncologist" },
+    { id: "hematologist", name: "Hematologist" },
+    { id: "ophthalmologist", name: "Ophthalmologist" },
+    { id: "optometrist", name: "Optometrist" },
+    { id: "dentist", name: "Dentist" },
+    { id: "orthodontist", name: "Orthodontist" },
+    { id: "oral_surgeon", name: "Oral Surgeon" },
+    { id: "general_surgeon", name: "General Surgeon" },
+    { id: "plastic_surgeon", name: "Plastic Surgeon" },
+    { id: "vascular_surgeon", name: "Vascular Surgeon" },
+    { id: "radiologist", name: "Radiologist" },
+    { id: "pathologist", name: "Pathologist" },
+    { id: "emergency_medicine_specialist", name: "Emergency Medicine Specialist" },
+    { id: "critical_care_specialist", name: "Critical Care Specialist" },
+    { id: "ayurveda", name: "Ayurveda" },
+    { id: "homeopathy", name: "Homeopathy" },
+    { id: "unani", name: "Unani" },
+    { id: "siddha", name: "Siddha" },
+  ];
+
+  await prisma.specialization.createMany({
+    data: SPECIALIZATIONS,
+    skipDuplicates: true,
+  });
+  console.log(`✅ Seeded ${SPECIALIZATIONS.length} specializations`);
 
   // ─── DOCTORS ───────────────────────────────────────────────────────────────
 

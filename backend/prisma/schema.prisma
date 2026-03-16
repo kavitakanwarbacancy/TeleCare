@@ -54,6 +54,14 @@ enum NotificationType {
   APPOINTMENT_CANCELLED
 }
 
+// Canonical list of medical specializations for doctors.
+model Specialization {
+  id   String @id
+  name String @unique
+
+  @@map("specializations")
+}
+
 // --- User (auth + base identity) ---
 // Includes fields for email verification and password reset
 model User {
@@ -120,7 +128,6 @@ model DoctorAvailability {
   startTime    String   @map("start_time") // HH:mm format (e.g. "09:00")
   endTime      String   @map("end_time") // HH:mm format (e.g. "17:00")
   slotDuration Int?     @default(30) @map("slot_duration") // minutes per slot
-  bufferTime   Int?     @default(0) @map("buffer_time") // minutes between appointments
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 

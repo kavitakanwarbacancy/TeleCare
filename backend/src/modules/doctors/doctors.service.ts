@@ -126,11 +126,62 @@ export async function getAvailability(doctorId: string) {
       startTime: true,
       endTime: true,
       slotDuration: true,
-      bufferTime: true,
     },
   });
 
   return { availability };
+}
+
+export async function getMyAvailability(userId: string) {
+  const profile = await prisma.doctorProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!profile) {
+    serviceError("Doctor profile not found", 404, "NOT_FOUND");
+  }
+  return getAvailability(profile.id);
+}
+
+export async function getMyProfile(userId: string) {
+  const profile = await prisma.doctorProfile.findUnique({
+    where: { userId },
+    select: doctorListSelect,
+  });
+  if (!profile) {
+    serviceError("Doctor profile not found", 404, "NOT_FOUND");
+  }
+  return profile;
+}
+
+export async function updateMyAvailability(
+  userId: string,
+  data: { availability: Array<{ weekday: number; startTime: string; endTime: string; slotDuration: number }> },
+) {
+  const profile = await prisma.doctorProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  if (!profile) {
+    serviceError("Doctor profile not found", 404, "NOT_FOUND");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.doctorAvailability.deleteMany({ where: { doctorId: profile.id } });
+    if (data.availability && data.availability.length > 0) {
+      await tx.doctorAvailability.createMany({
+        data: data.availability.map((slot) => ({
+          doctorId: profile.id,
+          weekday: slot.weekday,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          slotDuration: slot.slotDuration,
+        })),
+      });
+    }
+  });
+
+  return getAvailability(profile.id);
 }
 
 export interface UpdateDoctorProfileData {
@@ -171,4 +222,11 @@ export async function updateMyProfile(userId: string, data: UpdateDoctorProfileD
   });
 
   return updated;
+}
+
+export async function listSpecializations() {
+  return prisma.specialization.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 }
