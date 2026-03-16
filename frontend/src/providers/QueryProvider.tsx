@@ -1,6 +1,6 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, keepPreviousData } from "@tanstack/react-query";
 import { useState } from "react";
 
 /**
@@ -13,7 +13,11 @@ export default function QueryProvider({ children }: { children: React.ReactNode 
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30_000, // 30 s before re-fetching in background
+            staleTime: 30_000,          // data is fresh for 30s — no background refetch
+            gcTime: 10 * 60 * 1000,    // keep cache for 10 min — instant back-navigation
+            refetchOnWindowFocus: false, // don't refetch when the tab regains focus
+            refetchOnReconnect: true,   // do refetch when internet reconnects
+            placeholderData: keepPreviousData, // show old data while reloading — no empty flashes
             retry: 1,
           },
         },

@@ -22,9 +22,9 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/NotificationBell";
-import { usersApi, filesApi } from "@/services/api";
+import { usersApi, filesApi, appointmentsApi, prescriptionsApi } from "@/services/api";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -60,6 +60,35 @@ const adminNav: NavItem[] = [
   { to: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
+// Prefetch API data on hover so it's cached before the page mounts
+const PREFETCH_MAP: Record<string, (qc: ReturnType<typeof useQueryClient>) => void> = {
+  "/patient/appointments": (qc) =>
+    qc.prefetchQuery({
+      queryKey: ["appointments", "patient", "all"],
+      queryFn: () => appointmentsApi.list({ limit: 100 }),
+    }),
+  "/patient/records": (qc) =>
+    qc.prefetchQuery({
+      queryKey: ["prescriptions", "mine"],
+      queryFn: () => prescriptionsApi.getMine(),
+    }),
+  "/patient/dashboard": (qc) =>
+    qc.prefetchQuery({
+      queryKey: ["appointments", "patient", "upcoming"],
+      queryFn: () => appointmentsApi.list({ limit: 10 }),
+    }),
+  "/doctor/appointments": (qc) =>
+    qc.prefetchQuery({
+      queryKey: ["appointments", "doctor", "all"],
+      queryFn: () => appointmentsApi.list({ limit: 100 }),
+    }),
+  "/doctor/dashboard": (qc) =>
+    qc.prefetchQuery({
+      queryKey: ["appointments", "doctor", "all"],
+      queryFn: () => appointmentsApi.list({ limit: 100 }),
+    }),
+};
+
 function SidebarItem({
   to,
   icon: Icon,
@@ -68,6 +97,7 @@ function SidebarItem({
   onClick,
 }: NavItem & { active: boolean; onClick?: () => void }) {
   const [pending, setPending] = React.useState(false);
+  const qc = useQueryClient();
 
   React.useEffect(() => { setPending(false); }, [active]);
 
@@ -76,6 +106,7 @@ function SidebarItem({
   return (
     <Link
       href={to}
+      onMouseEnter={() => PREFETCH_MAP[to]?.(qc)}
       onClick={() => { setPending(true); onClick?.(); }}
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
@@ -106,11 +137,16 @@ export const Layout = ({ children, role }: LayoutProps) => {
   const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = React.useState(false);
 
   const navItems = role === "patient" ? patientNav : role === "doctor" ? doctorNav : adminNav;
 
-  const displayName = user?.name ?? "Loading...";
-  const avatarSeed = user?.id ?? "default";
+  React.useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  const displayName = isHydrated && user?.name ? user.name : "Loading...";
+  const avatarSeed = isHydrated && user?.id ? user.id : "default";
 
   const { data: me } = useQuery({
     queryKey: ["users", "me"],

@@ -41,7 +41,7 @@ export function ChatPanel({ appointmentInfo, chat, onClose }: Props) {
         initial={{ x: 400 }}
         animate={{ x: 0 }}
         exit={{ x: 400 }}
-        className="w-full lg:w-[400px] bg-white flex flex-col shadow-2xl z-30"
+        className="fixed inset-y-0 right-0 w-full lg:w-[400px] lg:relative lg:inset-auto bg-white flex flex-col shadow-2xl z-30"
       >
         {/* Header */}
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">

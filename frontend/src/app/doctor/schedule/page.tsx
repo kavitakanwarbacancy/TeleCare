@@ -60,7 +60,7 @@ export default function DoctorSchedule() {
   const [selectedDate, setSelectedDate] = React.useState(startOfDay(new Date()));
 
   const { data, isLoading } = useQuery({
-    queryKey: ["appointments", user?.id, "all"],
+    queryKey: ["appointments", "doctor", "all"],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
     enabled: !!token,
   });

@@ -146,9 +146,10 @@ export default function PatientAppointments() {
   const qClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState<Tab>('Upcoming');
   const [cancellingId, setCancellingId] = React.useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = React.useState(10);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['appointments'],
+    queryKey: ['appointments', 'patient', 'all'],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
   });
 
@@ -156,12 +157,17 @@ export default function PatientAppointments() {
     mutationFn: (id: string) => appointmentsApi.cancel(id),
     onMutate: (id) => setCancellingId(id),
     onSettled: () => setCancellingId(null),
-    onSuccess: () => qClient.invalidateQueries({ queryKey: ['appointments'] }),
+    onSuccess: () => qClient.invalidateQueries({ queryKey: ['appointments', 'patient', 'all'] }),
     onError: (err: Error) => alert(err.message),
   });
 
   const all = data?.data ?? [];
   const filtered = all.filter((a) => getTab(a.status) === activeTab);
+  const visible = filtered.slice(0, visibleCount);
+
+  React.useEffect(() => {
+    setVisibleCount(10);
+  }, [activeTab, all.length]);
 
   return (
     <motion.div
@@ -218,28 +224,41 @@ export default function PatientAppointments() {
       )}
 
       {!isLoading && !isError && (
-        <div className="grid gap-6">
-          {filtered.length === 0 ? (
-            <div className="p-16 bg-white rounded-[40px] border border-dashed border-slate-200 text-center">
-              <p className="text-slate-400 font-medium mb-4">No {activeTab.toLowerCase()} appointments.</p>
-              {activeTab === 'Upcoming' && (
-                <Link
-                  href="/patient/doctors"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-bold rounded-2xl text-sm hover:bg-brand-600 transition-all"
-                >
-                  <Plus className="w-4 h-4" /> Book one now
-                </Link>
-              )}
+        <div className="space-y-4">
+          <div className="grid gap-6">
+            {filtered.length === 0 ? (
+              <div className="p-16 bg-white rounded-[40px] border border-dashed border-slate-200 text-center">
+                <p className="text-slate-400 font-medium mb-4">No {activeTab.toLowerCase()} appointments.</p>
+                {activeTab === 'Upcoming' && (
+                  <Link
+                    href="/patient/doctors"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-bold rounded-2xl text-sm hover:bg-brand-600 transition-all"
+                  >
+                    <Plus className="w-4 h-4" /> Book one now
+                  </Link>
+                )}
+              </div>
+            ) : (
+              visible.map((appt) => (
+                <AppointmentCard
+                  key={appt.id}
+                  appt={appt}
+                  onCancel={() => cancelMutation.mutate(appt.id)}
+                  cancelling={cancellingId === appt.id}
+                />
+              ))
+            )}
+          </div>
+          {filtered.length > visibleCount && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => Math.min(prev + 10, filtered.length))}
+                className="px-6 py-2.5 rounded-full border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
+              >
+                Load more ({visibleCount}/{filtered.length})
+              </button>
             </div>
-          ) : (
-            filtered.map((appt) => (
-              <AppointmentCard
-                key={appt.id}
-                appt={appt}
-                onCancel={() => cancelMutation.mutate(appt.id)}
-                cancelling={cancellingId === appt.id}
-              />
-            ))
           )}
         </div>
       )}

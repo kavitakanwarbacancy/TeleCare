@@ -139,7 +139,7 @@ export default function PatientProfile() {
   });
 
   const { data: apptData } = useQuery({
-    queryKey: ['appointments', 'all'],
+    queryKey: ['appointments', 'patient', 'all'],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
     enabled: !!token,
   });

@@ -417,9 +417,10 @@ export default function DoctorAppointments() {
   const [activeTab, setActiveTab] = React.useState<Tab>("Requests");
   const [actionId, setActionId] = React.useState<{ id: string; action: string } | null>(null);
   const [pendingDecline, setPendingDecline] = React.useState<{ id: string; patientName: string } | null>(null);
+  const [visibleCount, setVisibleCount] = React.useState(10);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["appointments", user?.id, "all"],
+    queryKey: ["appointments", "doctor", "all"],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
     enabled: !!token,
   });
@@ -435,7 +436,7 @@ export default function DoctorAppointments() {
       setActionId(null);
       setPendingDecline(null);
     },
-    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", user?.id, "all"] }),
+    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", "doctor", "all"] }),
     onError: (err: Error) => alert(err.message),
   });
 
@@ -443,7 +444,7 @@ export default function DoctorAppointments() {
     mutationFn: (id: string) => appointmentsApi.cancel(id),
     onMutate: (id) => setActionId({ id, action: "cancel" }),
     onSettled: () => setActionId(null),
-    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", user?.id, "all"] }),
+    onSuccess: () => qClient.invalidateQueries({ queryKey: ["appointments", "doctor", "all"] }),
     onError: (err: Error) => alert(err.message),
   });
 
@@ -458,6 +459,11 @@ export default function DoctorAppointments() {
   );
 
   const filtered = all.filter((a) => getTab(a.status) === activeTab);
+  const visible = filtered.slice(0, visibleCount);
+
+  React.useEffect(() => {
+    setVisibleCount(10);
+  }, [activeTab, all.length]);
 
   return (
     <motion.div
@@ -531,34 +537,47 @@ export default function DoctorAppointments() {
 
       {/* Content */}
       {!isLoading && !isError && (
-        <div className="grid gap-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.length === 0 ? (
-              <EmptyState tab={activeTab} />
-            ) : activeTab === "Requests" ? (
-              filtered.map((appt) => (
-                <RequestCard
-                  key={appt.id}
-                  appt={appt}
-                  onAccept={() => statusMutation.mutate({ id: appt.id, status: "CONFIRMED" })}
-                  onDecline={() => setPendingDecline({ id: appt.id, patientName: appt.patient.user.name })}
-                  accepting={actionId?.id === appt.id && actionId?.action === "accept"}
-                  declining={actionId?.id === appt.id && actionId?.action === "decline"}
-                />
-              ))
-            ) : activeTab === "Scheduled" ? (
-              filtered.map((appt) => (
-                <ScheduledCard
-                  key={appt.id}
-                  appt={appt}
-                  onCancel={() => cancelMutation.mutate(appt.id)}
-                  cancelling={actionId?.id === appt.id && actionId?.action === "cancel"}
-                />
-              ))
-            ) : (
-              filtered.map((appt) => <ReadOnlyCard key={appt.id} appt={appt} />)
-            )}
-          </AnimatePresence>
+        <div className="space-y-4">
+          <div className="grid gap-4">
+            <AnimatePresence mode="popLayout">
+              {filtered.length === 0 ? (
+                <EmptyState tab={activeTab} />
+              ) : activeTab === "Requests" ? (
+                visible.map((appt) => (
+                  <RequestCard
+                    key={appt.id}
+                    appt={appt}
+                    onAccept={() => statusMutation.mutate({ id: appt.id, status: "CONFIRMED" })}
+                    onDecline={() => setPendingDecline({ id: appt.id, patientName: appt.patient.user.name })}
+                    accepting={actionId?.id === appt.id && actionId?.action === "accept"}
+                    declining={actionId?.id === appt.id && actionId?.action === "decline"}
+                  />
+                ))
+              ) : activeTab === "Scheduled" ? (
+                visible.map((appt) => (
+                  <ScheduledCard
+                    key={appt.id}
+                    appt={appt}
+                    onCancel={() => cancelMutation.mutate(appt.id)}
+                    cancelling={actionId?.id === appt.id && actionId?.action === "cancel"}
+                  />
+                ))
+              ) : (
+                visible.map((appt) => <ReadOnlyCard key={appt.id} appt={appt} />)
+              )}
+            </AnimatePresence>
+          </div>
+          {filtered.length > visibleCount && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setVisibleCount((prev) => Math.min(prev + 10, filtered.length))}
+                className="px-6 py-2.5 rounded-full border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
+              >
+                Load more ({visibleCount}/{filtered.length})
+              </button>
+            </div>
+          )}
         </div>
       )}
 

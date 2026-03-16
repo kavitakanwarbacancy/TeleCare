@@ -90,7 +90,7 @@ export default function DoctorDashboard() {
   const { user, token } = useAuth();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["appointments", user?.id, "all"],
+    queryKey: ["appointments", "doctor", "all"],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
     enabled: !!token,
   });

@@ -104,7 +104,7 @@ export default function DoctorProfilePage() {
         reason: reason.trim() || undefined,
       }),
     onSuccess: () => {
-      qClient.invalidateQueries({ queryKey: ['appointments'] });
+      qClient.invalidateQueries({ queryKey: ['appointments', 'patient', 'all'] });
       router.push('/patient/appointments');
     },
     onError: (err: Error) => setBookingError(err.message),

@@ -79,7 +79,7 @@ export default function DoctorPatients() {
   const [selectedPatient, setSelectedPatient] = React.useState<PatientRow | null>(null);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["appointments", user?.id, "all"],
+    queryKey: ["appointments", "doctor", "all"],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
     enabled: !!token,
   });

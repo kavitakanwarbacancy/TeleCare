@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import {
   Video, Mic, MicOff, VideoOff, PhoneOff,
   MessageSquare, FileText, Paperclip,
-  User, Maximize2, Minimize2, Loader2, AlertCircle,
+  User, Maximize2, Minimize2, Loader2, AlertCircle, CameraOff,
 } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import { videoApi, VideoInfoResponse } from '@/services/api';
@@ -23,6 +23,13 @@ export default function ConsultationRoom() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Lock body scroll so the underlying Layout doesn't expand the viewport on mobile
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
 
   // Load appointment info on mount
   useEffect(() => {
@@ -44,7 +51,7 @@ export default function ConsultationRoom() {
   return (
     <div className="fixed inset-0 bg-slate-900 z-[100] flex flex-col lg:flex-row overflow-hidden">
       {/* ── Video Area ── */}
-      <div className="flex-1 relative flex flex-col">
+      <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
 
         {/* Header overlay */}
         <div className="absolute top-0 inset-x-0 p-6 flex items-center justify-between z-20 bg-gradient-to-b from-black/50 to-transparent pointer-events-none">
@@ -107,7 +114,7 @@ export default function ConsultationRoom() {
         </div>
 
         {/* Video feeds */}
-        <div className="flex-1 relative bg-slate-800 flex items-center justify-center">
+        <div className="flex-1 relative bg-slate-800 flex items-center justify-center min-h-0 overflow-hidden">
 
           {/* Idle */}
           {video.connectionState === 'idle' && (
@@ -157,15 +164,30 @@ export default function ConsultationRoom() {
             </div>
           )}
 
+          {/* Leaving overlay */}
+          {video.connectionState === 'leaving' && (
+            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/80">
+              <div className="text-center space-y-4">
+                <Loader2 className="w-16 h-16 text-brand-500 animate-spin mx-auto" />
+                <p className="text-white font-medium">Ending call...</p>
+              </div>
+            </div>
+          )}
+
           {/* Remote feed */}
           {video.connectionState === 'connected' && (
-            <div className="w-full h-full relative overflow-hidden">
+            <div className="w-full h-full relative overflow-hidden bg-slate-800">
+              {/* Video element — shown only when remote has camera on */}
               <video
                 ref={video.remoteVideoRef}
                 autoPlay
                 playsInline
-                className={`w-full h-full object-cover ${remoteParticipant ? '' : 'hidden'}`}
+                className={`w-full h-full object-cover ${
+                  remoteParticipant?.isVideoOn ? '' : 'hidden'
+                }`}
               />
+
+              {/* No remote participant yet */}
               {!remoteParticipant && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
@@ -173,6 +195,21 @@ export default function ConsultationRoom() {
                       <User className="text-white/30 w-16 h-16" />
                     </div>
                     <p className="text-white/50 font-medium">Waiting for other participant...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Remote participant has camera off */}
+              {remoteParticipant && !remoteParticipant.isVideoOn && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
+                  <div className="text-center">
+                    <div className="w-32 h-32 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
+                      <CameraOff className="text-white/40 w-14 h-14" />
+                    </div>
+                    <p className="text-white/60 font-medium text-lg">
+                      {remoteParticipant.userName}
+                    </p>
+                    <p className="text-white/40 text-sm mt-1">Camera is off</p>
                   </div>
                 </div>
               )}
@@ -202,7 +239,7 @@ export default function ConsultationRoom() {
         </div>
 
         {/* Controls bar */}
-        <div className="h-24 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-center gap-4 lg:gap-8 px-6 z-20">
+        <div className="h-24 shrink-0 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-center gap-4 lg:gap-8 px-6 z-20">
           <button
             onClick={video.toggleMute}
             disabled={video.connectionState !== 'connected'}
@@ -241,10 +278,16 @@ export default function ConsultationRoom() {
           </button>
           <button
             onClick={video.leaveCall}
-            className="p-4 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-600/30 active:scale-95 flex items-center gap-3 px-8"
+            disabled={video.connectionState === 'leaving' || video.connectionState === 'left'}
+            className="p-4 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-600/30 active:scale-95 flex items-center gap-3 px-8 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            <PhoneOff className="w-6 h-6" />
-            <span className="font-bold hidden sm:block">End Call</span>
+            {video.connectionState === 'leaving'
+              ? <Loader2 className="w-6 h-6 animate-spin" />
+              : <PhoneOff className="w-6 h-6" />
+            }
+            <span className="font-bold hidden sm:block">
+              {video.connectionState === 'leaving' ? 'Ending...' : 'End Call'}
+            </span>
           </button>
         </div>
       </div>

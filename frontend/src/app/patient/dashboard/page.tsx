@@ -188,7 +188,7 @@ export default function PatientDashboard() {
 
   // Scoped to this user's id so cache never leaks between accounts
   const { data, isLoading } = useQuery({
-    queryKey: ["appointments", user?.id, "upcoming"],
+    queryKey: ["appointments", "patient", "upcoming"],
     queryFn: () => appointmentsApi.list({ limit: 10 }),
     enabled: !!token,
   });
