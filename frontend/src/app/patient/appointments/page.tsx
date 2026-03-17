@@ -4,12 +4,23 @@ import React from 'react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import {
-  Calendar, Clock, Video, MoreVertical,
-  AlertCircle, Plus, Loader2,
+  Calendar,
+  Clock,
+  Video,
+  MoreVertical,
+  AlertCircle,
+  Plus,
+  Loader2,
+  RotateCw,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { appointmentsApi, type Appointment } from '@/services/api';
+import {
+  appointmentsApi,
+  doctorsApi,
+  type Appointment,
+  type SpecializationOption,
+} from '@/services/api';
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
@@ -42,10 +53,12 @@ function StatusBadge({ status }: { status: string }) {
 
 function AppointmentCard({
   appt,
+  specializationLabel,
   onCancel,
   cancelling,
 }: {
   appt: Appointment;
+  specializationLabel: string;
   onCancel: () => void;
   cancelling: boolean;
 }) {
@@ -66,7 +79,7 @@ function AppointmentCard({
           <h4 className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors truncate leading-snug">
             {appt.doctor.user.name}
           </h4>
-          <p className="text-xs text-slate-400 truncate mt-0.5 mb-2">{appt.doctor.specialization}</p>
+          <p className="text-xs text-slate-400 truncate mt-0.5 mb-2">{specializationLabel}</p>
           <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 bg-brand-50 px-3 py-1 rounded-full">
             <Video className="w-3 h-3" /> Video Consultation
           </div>
@@ -148,6 +161,22 @@ export default function PatientAppointments() {
   const [cancellingId, setCancellingId] = React.useState<string | null>(null);
   const [visibleCount, setVisibleCount] = React.useState(10);
 
+  const {
+    data: specializationData,
+  } = useQuery({
+    queryKey: ['doctor', 'specializations'],
+    queryFn: () => doctorsApi.getSpecializations(),
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const specializationNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    specializationData?.data.forEach((s: SpecializationOption) => {
+      map.set(s.id, s.name);
+    });
+    return map;
+  }, [specializationData]);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['appointments', 'patient', 'all'],
     queryFn: () => appointmentsApi.list({ limit: 100 }),
@@ -181,12 +210,22 @@ export default function PatientAppointments() {
           <h2 className="text-3xl font-bold text-slate-900 mb-2">My Appointments</h2>
           <p className="text-slate-500 font-medium">Keep track of your upcoming and past consultations.</p>
         </div>
-        <Link
-          href="/patient/doctors"
-          className="px-6 py-4 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 transition-all flex items-center gap-2 active:scale-95"
-        >
-          <Plus className="w-5 h-5" /> Book New Appointment
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => qClient.invalidateQueries({ queryKey: ['appointments', 'patient', 'all'] })}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
+          >
+            <RotateCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <Link
+            href="/patient/doctors"
+            className="px-6 py-4 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 transition-all flex items-center gap-2 active:scale-95"
+          >
+            <Plus className="w-5 h-5" /> Book New Appointment
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -243,6 +282,9 @@ export default function PatientAppointments() {
                 <AppointmentCard
                   key={appt.id}
                   appt={appt}
+                  specializationLabel={
+                    specializationNameById.get(appt.doctor.specialization) ?? appt.doctor.specialization
+                  }
                   onCancel={() => cancelMutation.mutate(appt.id)}
                   cancelling={cancellingId === appt.id}
                 />

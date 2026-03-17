@@ -10,7 +10,12 @@ import {
 import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, addDays, startOfDay, setHours, setMinutes } from 'date-fns';
-import { doctorsApi, appointmentsApi, type AvailabilitySlot } from '@/services/api';
+import {
+  doctorsApi,
+  appointmentsApi,
+  type AvailabilitySlot,
+  type SpecializationOption,
+} from '@/services/api';
 
 // ─── Slot helpers ─────────────────────────────────────────────────────────────
 
@@ -80,6 +85,20 @@ export default function DoctorProfilePage() {
     enabled: !!id,
   });
 
+  const { data: specializationData } = useQuery({
+    queryKey: ['doctor', 'specializations'],
+    queryFn: () => doctorsApi.getSpecializations(),
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const specializationNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    specializationData?.data.forEach((s: SpecializationOption) => {
+      map.set(s.id, s.name);
+    });
+    return map;
+  }, [specializationData]);
+
   const { data: availData, isLoading: loadingSlots } = useQuery({
     queryKey: ['doctor-availability', id, availabilityRange.from, availabilityRange.to],
     queryFn: () => doctorsApi.getAvailability(id, availabilityRange),
@@ -94,6 +113,17 @@ export default function DoctorProfilePage() {
 
   // Reset slot on date change.
   React.useEffect(() => { setSelectedSlot(null); }, [selectedDate]);
+
+  const specializationLabel = doctor
+    ? specializationNameById.get(doctor.specialization) ?? doctor.specialization
+    : '';
+
+  React.useEffect(() => {
+    if (doctor) {
+      const name = doctor.user.name || 'Doctor';
+      document.title = `${name} | TeleCare`;
+    }
+  }, [doctor]);
 
   const bookMutation = useMutation({
     mutationFn: () =>
@@ -162,7 +192,7 @@ export default function DoctorProfilePage() {
                     <Star className="w-4 h-4 fill-amber-500" /> 4.8
                   </div>
                 </div>
-                <p className="text-xl font-bold text-brand-600 mb-6">{doctor.specialization}</p>
+                <p className="text-xl font-bold text-brand-600 mb-6">{specializationLabel}</p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                   {[

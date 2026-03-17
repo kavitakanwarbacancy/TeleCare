@@ -262,7 +262,15 @@ export const Layout = ({ children, role }: LayoutProps) => {
 
           <div className="flex-1 hidden lg:block">
             <h1 className="text-xl font-semibold text-slate-800 capitalize">
-              {pathname.split("/").pop()?.replace(/-/g, " ")}
+              {(() => {
+                const segments = pathname.split("/").filter(Boolean);
+                if (segments.length === 0) return "dashboard";
+                const last = segments[segments.length - 1];
+                const secondLast = segments[segments.length - 2];
+                const isUuidLike = /^[0-9a-fA-F-]{8,}$/.test(last);
+                const raw = isUuidLike && secondLast ? secondLast : last;
+                return raw.replace(/-/g, " ");
+              })()}
             </h1>
           </div>
 

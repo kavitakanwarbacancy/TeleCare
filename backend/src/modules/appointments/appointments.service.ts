@@ -260,7 +260,9 @@ export async function listAppointments(
     prisma.appointment.findMany({
       where,
       select: appointmentSelect,
-      orderBy: { scheduledAt: "asc" },
+      orderBy: {
+        createdAt: "desc",
+      },
       skip: (page - 1) * limit,
       take: limit,
     }),

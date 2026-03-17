@@ -8,14 +8,18 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { prescriptionsApi, type Prescription } from "@/services/api";
+import {
+  prescriptionsApi,
+  doctorsApi,
+  type Prescription,
+  type SpecializationOption,
+} from "@/services/api";
 import { useAuth } from "@/hooks/useAuth";
 
 // ─── Canvas prescription generator ───────────────────────────────────────────
 
-async function downloadPrescriptionPng(rx: Prescription): Promise<void> {
+async function downloadPrescriptionPng(rx: Prescription, specializationLabel: string): Promise<void> {
   const doctorName = rx.doctor?.user.name ?? "Doctor";
-  const specialization = rx.doctor?.specialization ?? "";
   const date = format(new Date(rx.createdAt), "dd MMM yyyy");
   const W = 800;
   const PAD = 48;
@@ -50,10 +54,11 @@ async function downloadPrescriptionPng(rx: Prescription): Promise<void> {
 
   ctx.fillStyle = "#0f172a";
   ctx.font = "bold 18px Arial, sans-serif";
-  ctx.fillText(`Dr. ${doctorName}`, PAD, y);
+  const displayDoctorName = /^dr\.?\s/i.test(doctorName) ? doctorName : `Dr. ${doctorName}`;
+  ctx.fillText(displayDoctorName, PAD, y);
   ctx.fillStyle = "#64748b";
   ctx.font = "13px Arial, sans-serif";
-  ctx.fillText(specialization, PAD, y + 20);
+  ctx.fillText(specializationLabel, PAD, y + 20);
 
   y += 50;
 
@@ -144,13 +149,13 @@ async function downloadPrescriptionPng(rx: Prescription): Promise<void> {
 
 // ─── Prescription card ────────────────────────────────────────────────────────
 
-function PrescriptionCard({ rx }: { rx: Prescription }) {
+function PrescriptionCard({ rx, specializationLabel }: { rx: Prescription; specializationLabel: string }) {
   const [expanded, setExpanded] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
     setDownloading(true);
-    try { await downloadPrescriptionPng(rx); }
+    try { await downloadPrescriptionPng(rx, specializationLabel); }
     finally { setDownloading(false); }
   };
 
@@ -167,9 +172,9 @@ function PrescriptionCard({ rx }: { rx: Prescription }) {
               <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-full">Prescription</span>
             </div>
             <p className="font-bold text-slate-900 text-sm">
-              Dr. {rx.doctor?.user.name ?? "Doctor"}
+                {/^dr\.?\s/i.test(rx.doctor?.user.name ?? "") ? (rx.doctor?.user.name ?? "Doctor") : `Dr. ${rx.doctor?.user.name ?? "Doctor"}`}
             </p>
-            <p className="text-xs text-slate-400 mt-0.5">{rx.doctor?.specialization}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{specializationLabel}</p>
             <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-400">
               <Calendar className="w-3 h-3" />
               <span>{format(new Date(rx.createdAt), "MMM d, yyyy • h:mm a")}</span>
@@ -253,12 +258,33 @@ export default function MedicalRecords() {
 
   const prescriptions = data?.prescriptions ?? [];
 
+   const { data: specializationData } = useQuery({
+    queryKey: ["doctor", "specializations"],
+    queryFn: () => doctorsApi.getSpecializations(),
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const specializationNameById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    specializationData?.data.forEach((s: SpecializationOption) => {
+      map.set(s.id, s.name);
+    });
+    return map;
+  }, [specializationData]);
+
+  const getSpecializationLabel = (spec: string | null | undefined) =>
+    specializationNameById.get(spec ?? "") ?? (spec ?? "");
+
   const filtered = search.trim()
-    ? prescriptions.filter(rx =>
-        rx.doctor?.user.name.toLowerCase().includes(search.toLowerCase()) ||
-        rx.items.some(i => i.drugName.toLowerCase().includes(search.toLowerCase())) ||
-        rx.doctor?.specialization.toLowerCase().includes(search.toLowerCase())
-      )
+    ? prescriptions.filter(rx => {
+        const term = search.toLowerCase();
+        const specLabel = getSpecializationLabel(rx.doctor?.specialization).toLowerCase();
+        return (
+          rx.doctor?.user.name.toLowerCase().includes(term) ||
+          rx.items.some(i => i.drugName.toLowerCase().includes(term)) ||
+          specLabel.includes(term)
+        );
+      })
     : prescriptions;
 
   return (
@@ -318,7 +344,11 @@ export default function MedicalRecords() {
       {!isLoading && !isError && filtered.length > 0 && (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filtered.map(rx => (
-            <PrescriptionCard key={rx.id} rx={rx} />
+            <PrescriptionCard
+              key={rx.id}
+              rx={rx}
+              specializationLabel={getSpecializationLabel(rx.doctor?.specialization)}
+            />
           ))}
         </div>
       )}

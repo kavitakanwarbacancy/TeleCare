@@ -51,7 +51,8 @@ export async function buildPrescriptionPng(params: PrescriptionCanvasParams): Pr
 
   ctx.fillStyle = '#0f172a';
   ctx.font = 'bold 18px Arial, sans-serif';
-  ctx.fillText(`Dr. ${doctorName}`, PAD, y);
+  const displayDoctorName = /^dr\.?\s/i.test(doctorName) ? doctorName : `Dr. ${doctorName}`;
+  ctx.fillText(displayDoctorName, PAD, y);
   ctx.fillStyle = '#64748b';
   ctx.font = '13px Arial, sans-serif';
   ctx.fillText(specialization, PAD, y + 20);

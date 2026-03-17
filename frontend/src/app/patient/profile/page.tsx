@@ -12,7 +12,7 @@ import { motion } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { usersApi, patientsApi, appointmentsApi, filesApi } from '@/services/api';
-import { getStates, getCities } from '@/constants/india-locations';
+import { getStates, getCities } from '@/constants/us-locations';
 import { useAuth } from '@/hooks/useAuth';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -286,7 +286,7 @@ export default function PatientProfile() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="max-w-4xl mx-auto space-y-8"
+      className="space-y-8"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

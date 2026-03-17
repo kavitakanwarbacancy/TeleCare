@@ -39,6 +39,13 @@ export default function PublicDoctorProfilePage() {
     enabled: !!id,
   });
 
+  React.useEffect(() => {
+    if (doctor) {
+      const name = doctor.user.name || "Doctor";
+      document.title = `${name} | TeleCare`;
+    }
+  }, [doctor]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col">

@@ -7,6 +7,7 @@ import {
   Calendar, Clock, Video,
   CheckCircle2, XCircle, Loader2,
   ClockIcon, PhoneCall, AlertTriangle,
+  RotateCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -477,14 +478,24 @@ export default function DoctorAppointments() {
           <h2 className="text-3xl font-bold text-slate-900 mb-1">Appointments</h2>
           <p className="text-slate-500 font-medium">Review requests and manage your consultations.</p>
         </div>
-        {counts.Requests > 0 && (
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl">
-            <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-            <p className="text-sm font-bold text-amber-600">
-              {counts.Requests} pending {counts.Requests === 1 ? "request" : "requests"}
-            </p>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => qClient.invalidateQueries({ queryKey: ["appointments", "doctor", "all"] })}
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 active:scale-95 transition-all"
+          >
+            <RotateCw className="w-4 h-4" />
+            Refresh
+          </button>
+          {counts.Requests > 0 && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl">
+              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+              <p className="text-sm font-bold text-amber-600">
+                {counts.Requests} pending {counts.Requests === 1 ? "request" : "requests"}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

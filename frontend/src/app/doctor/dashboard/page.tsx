@@ -115,6 +115,12 @@ export default function DoctorDashboard() {
   const totalPatients = new Set(allAppointments.map((a) => a.patient.user.id)).size;
   const totalAppointments = allAppointments.length;
 
+  const formatDoctorDisplayName = (name: string | null | undefined): string => {
+    const raw = (name ?? "").trim();
+    if (!raw) return "Doctor";
+    return /^dr\.?\s/i.test(raw) ? raw : `Dr. ${raw}`;
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -126,7 +132,7 @@ export default function DoctorDashboard() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1.5 sm:mb-2">
-            Welcome back, Dr. {user?.name ?? "..."} 👋
+            Welcome back, {formatDoctorDisplayName(user?.name)} 👋
           </h2>
           <p className="text-sm sm:text-base text-slate-500 font-medium">
             {isLoading

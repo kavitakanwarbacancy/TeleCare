@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Stethoscope, Mail, Lock, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Stethoscope, Mail, Lock, ArrowRight, ChevronLeft, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { authApi } from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -159,8 +159,17 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="w-full py-5 bg-brand-500 text-white font-bold rounded-2xl shadow-xl shadow-brand-100 hover:bg-brand-600 hover:shadow-brand-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Logging in...' : 'Login'}
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                <>
+                  Login
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </form>
 

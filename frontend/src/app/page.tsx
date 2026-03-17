@@ -21,7 +21,7 @@ import {
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { doctorsApi, type SpecializationOption } from '@/services/api';
-import { getStates, getCities } from '@/constants/india-locations';
+import { getStates, getCities } from '@/constants/us-locations';
 
 const SELECT_CLASS =
     'w-full appearance-none pl-4 pr-10 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-900 text-sm disabled:opacity-60 disabled:cursor-not-allowed';

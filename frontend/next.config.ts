@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "motion", "@tanstack/react-query"],
   },
 
+  devIndicators: false,
+
   images: {
     remotePatterns: [
       {
