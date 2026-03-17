@@ -1,0 +1,29 @@
+node_modules
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+.pnpm-store
+
+# Environment & secrets
+.env
+
+# VCS & editor
+.git
+.gitignore
+.DS_Store
+.vscode
+.idea
+
+# Build outputs
+dist
+coverage
+
+# Prisma & generated artifacts
+generated
+prisma/dev.db
+
+# Uploads / runtime data
+uploads
+
+# others
+.cursor

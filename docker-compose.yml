@@ -3,8 +3,12 @@ services:
     build: ./backend
     container_name: telecare_app
     ports:
-      - "4000:4001"
+      - "4001:4001"
     environment:
+      NODE_ENV: production
+      PORT: 4001
+      DB_HOST: db
+      DB_PORT: 5432
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
     env_file:
